@@ -1,6 +1,6 @@
 extends "_.gd"
 
-const __ANIMATIONS_INFOS_OPTION: StringName = "importers/pencil2d/animations_infos"
+const __ANIMATIONS_INFOS_OPTION: StringName = "piskel/animations_infos"
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["piskel"]

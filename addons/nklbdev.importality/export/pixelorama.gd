@@ -6,13 +6,9 @@ enum PxoLayerType {
 	LAYER_3D = 2,
 }
 
-const __FRAMES_RANGES_OPTION: StringName = "importers/pencil2d/frames_ranges"
-
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["pxo"]
 	super("Pixelorama", recognized_extensions, [
-		_Options.create_option(__FRAMES_RANGES_OPTION, [],
-		PROPERTY_HINT_ARRAY_TYPE, "a:%s,b:%s" % [TYPE_INT, TYPE_STRING], PROPERTY_USAGE_DEFAULT),
 	], editor_file_system, [
 		# settings
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))

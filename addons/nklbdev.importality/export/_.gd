@@ -29,9 +29,8 @@ class _AnimationInfo:
 		return "AnimationInfo(name: %s, first_frame: %s, last_frame: %s, direction: %s, repeat_count: %s)" % [name, first_frame, last_frame, direction, repeat_count]
 
 var _common_temporary_files_directory_path: _ProjectSetting = _ProjectSetting.new(
-	"importers/common/temporary_files_directory_path", "",
-	TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR, "", true, func(v: String): return v.is_empty(),
-	"Temporary files directory not specified. Specify it in Project Settings -> General -> Importers -> Common -> Temporary Files Directory Path")
+	"common/temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
+	"", true, func(v: String): return v.is_empty())
 
 var __name: String
 var __recognized_extensions: PackedStringArray

@@ -8,18 +8,14 @@ extends "_.gd"
 #const _GridBasedSpriteSheetBuilder = preload("../sprite_sheet_builder/grid_based.gd")
 #const _PackedSpriteSheetBuilder = preload("../sprite_sheet_builder/packed.gd")
 
-#const __CAMERA_LAYER_NAME_OPTION: StringName = "importers/pencil2d/camera_layer_name"
 #const __FRAMES_RANGES_OPTION: StringName = "importers/pencil2d/frames_ranges"
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["gif"]
 	super("GIF", recognized_extensions, [
-	#	_Options.create_option(__CAMERA_LAYER_NAME_OPTION, "",
-	#	PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 	#	_Options.create_option(__FRAMES_RANGES_OPTION, [],# PackedStringArray(),
 	#	PROPERTY_HINT_ARRAY_TYPE, "a:%s,b:%s" % [TYPE_INT, TYPE_STRING], PROPERTY_USAGE_DEFAULT),
 	], editor_file_system, [
-		#__piskel_command_project_setting,
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
 func _export(res_source_file_path: String, options: Dictionary) -> _Models.ExportResultModel:

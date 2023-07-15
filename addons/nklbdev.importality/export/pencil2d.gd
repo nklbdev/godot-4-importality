@@ -3,18 +3,14 @@ extends "_.gd"
 const _XML = preload("../xml.gd")
 
 var __pencil2d_command_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"importers/pencil2d/pencil2d_command", "",
-	TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE, "*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty(),
-	"Pencil2D command not specified. Specify the command to run Pencil2D in Project Settings -> General -> Importers -> Pencil2D -> Pencil2D Command")
+	"pencil2d/pencil2d_command", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE,
+	"*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty())
 
-const __CAMERA_LAYER_NAME_OPTION: StringName = "importers/pencil2d/camera_layer_name"
 const __ANIMATIONS_INFOS_OPTION: StringName = "importers/pencil2d/animations_infos"
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["pclx"]
 	super("Pencil2D", recognized_extensions, [
-		_Options.create_option(__CAMERA_LAYER_NAME_OPTION, "",
-		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 		_Options.create_option(__ANIMATIONS_INFOS_OPTION, PackedStringArray(),
 		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 	], editor_file_system, [
@@ -85,7 +81,6 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
 	var command_line_params: PackedStringArray = PackedStringArray([
 		"--export", global_temp_png_path,
-		"--camera", options[__CAMERA_LAYER_NAME_OPTION].strip_edges(),
 		"--start", 1,
 		"--end", unique_frames_count,
 		"--transparency",

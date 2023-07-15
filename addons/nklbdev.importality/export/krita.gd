@@ -3,21 +3,17 @@ extends "_.gd"
 const _XML = preload("../xml.gd")
 
 var __krita_command_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"importers/krita/krita_command", "",
-	TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE, "*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty(),
-	"Krita command not specified. Specify the command to run Krita in Project Settings -> General -> Importers -> Krita -> Krita Command")
+	"krita/krita_command", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE,
+	"*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty())
 var __ps_exec_command_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"importers/krita/ps_exec_command", "",
-	TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE, "*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty(),
-	"PS_EXEC command not specified. Specify the command to run ps_exec in Project Settings -> General -> Importers -> Krita -> Ps Exec Command")
+	"krita/ps_exec_command", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE,
+	"*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty())
 var __krita_user_name: _ProjectSetting = _ProjectSetting.new(
-	"importers/krita/user_name", "",
-	TYPE_STRING, PROPERTY_HINT_NONE, "", true, func(v: String): return v.is_empty(),
-	"Krita user name not specified. Specify the name of the user to run Krita in Project Settings -> General -> Importers -> Krita -> User Name")
+	"krita/user_name", "", TYPE_STRING, PROPERTY_HINT_NONE,
+	"", true, func(v: String): return v.is_empty())
 var __krita_user_password: _ProjectSetting = _ProjectSetting.new(
-	"importers/krita/user_password", "",
-	TYPE_STRING, PROPERTY_HINT_PASSWORD, "", true, func(v: String): return v.is_empty(),
-	"Krita user password not specified. Specify the password of the user to run Krita in Project Settings -> General -> Importers -> Krita -> User Password")
+	"krita/user_password", "", TYPE_STRING, PROPERTY_HINT_PASSWORD,
+	"", true, func(v: String): return v.is_empty())
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["kra", "krita"]

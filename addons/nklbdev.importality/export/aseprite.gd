@@ -6,9 +6,8 @@ const __aseprite_output_animation_directions: PackedStringArray = \
 	[ "forward", "reverse", "pingpong", "pingpong_reverse" ]
 
 var __aseprite_command_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"importers/aseprite/aseprite_command", "",
-	TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE, "*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty(),
-	"Aseprite command not specified. Specify the command to run Aseprite in Project Settings -> General -> Importers -> Aseprite -> Aseprite Command")
+	"aseprite/aseprite_command", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE,
+	"*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty())
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["ase", "aseprite"]
