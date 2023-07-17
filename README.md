@@ -5,7 +5,7 @@
 
 Universal raster graphics and animations importers pack for Godot 4.x
 
-![icon](https://github.com/nklbdev/godot-4-importality/assets/7024016/c4cb536b-d908-4ae7-badd-b8d7f82f0abe)
+![icon](https://github.com/nklbdev/godot-4-importality/assets/7024016/978a36e8-61e0-406e-8a35-b872eff51be0)
 
 [Full documentation on Wiki](https://github.com/nklbdev/godot-4-importality/wiki)
 
