@@ -22,21 +22,12 @@ func import(
 	save_path: String
 	) -> _Models.ImportResultModel:
 
-	var atlas_texture: AtlasTexture = AtlasTexture.new()
-	atlas_texture.atlas = export_result.sprite_sheet.atlas
-	atlas_texture.filter_clip = true
-	atlas_texture.resource_local_to_scene = true
-	# for TextureRect, AtlasTexture must have region with area
-	# we gave it frame size and negative position to avoid to show any visible pixel of the texture
-	var sprite_size: Vector2i = export_result.sprite_sheet.source_image_size
-	atlas_texture.region = Rect2(-sprite_size - Vector2i.ONE, sprite_size)
-
 	var texture_rect: TextureRect = TextureRect.new()
 	var node_name: String = options[_Options.ROOT_NODE_NAME].strip_edges()
 	texture_rect.name = res_source_file_path.get_file().get_basename() \
 		if node_name.is_empty() else node_name
-	texture_rect.texture = atlas_texture
 	texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	var sprite_size: Vector2i = export_result.sprite_sheet.source_image_size
 	texture_rect.size = sprite_size
 
 	var animation_player: AnimationPlayer
@@ -45,35 +36,59 @@ func import(
 			match options[_Options.ANIMATION_STRATEGY]:
 
 				AnimationStrategy.SINGLE_ATLAS_TEXTURE_REGION_AND_MARGIN:
+					var atlas_texture: AtlasTexture = AtlasTexture.new()
+					atlas_texture.atlas = export_result.sprite_sheet.atlas
+					atlas_texture.filter_clip = options[_Options.ATLAS_TEXTURES_REGION_FILTER_CLIP_ENABLED]
+					atlas_texture.resource_local_to_scene = true
+					atlas_texture.region = Rect2(0, 0, 1, 1)
+					atlas_texture.margin = Rect2(2, 2, 0, 0)
+					texture_rect.texture = atlas_texture
+
 					animation_player = _create_animation_player(export_result.animation_library, {
 						".:texture:margin": func(frame_model: _Models.FrameModel) -> Rect2:
-							return Rect2(frame_model.sprite.offset, sprite_size - frame_model.sprite.region.size),
-						".:texture:region" : func(frame_model: _Models.FrameModel) -> Rect2i:
-							return  frame_model.sprite.region })
+							return \
+								Rect2(frame_model.sprite.offset,
+									sprite_size - frame_model.sprite.region.size) \
+								if frame_model.sprite.region.has_area() else \
+								Rect2(2, 2, 0, 0),
+						".:texture:region" : func(frame_model: _Models.FrameModel) -> Rect2:
+							return \
+								Rect2(frame_model.sprite.region) \
+								if frame_model.sprite.region.has_area() else \
+								Rect2(0, 0, 1, 1) })
 
 				AnimationStrategy.MULTIPLE_ATLAS_TEXTURES_INSTANCES:
-					var texture_cache: Array[AtlasTexture]
+					var atlas_texture_cache: Array[AtlasTexture]
 					animation_player = _create_animation_player(export_result.animation_library, {
 						".:texture": func(frame_model: _Models.FrameModel) -> Texture2D:
-							var margin: Rect2 = Rect2(frame_model.sprite.offset, sprite_size - frame_model.sprite.region.size)
-							var region: Rect2 = Rect2(frame_model.sprite.region)
-							var cached_result = texture_cache.filter(func(t: AtlasTexture) -> bool: return t.margin == margin and t.region == region)
-							var texture: AtlasTexture
+							var region: Rect2 = \
+								Rect2(frame_model.sprite.region) \
+								if frame_model.sprite.region.has_area() else \
+								Rect2(0, 0, 1, 1)
+							var margin: Rect2 = \
+								Rect2(frame_model.sprite.offset,
+									sprite_size - frame_model.sprite.region.size) \
+								if frame_model.sprite.region.has_area() else \
+								Rect2(2, 2, 0, 0)
+							var cached_result = atlas_texture_cache.filter(func(t: AtlasTexture) -> bool: return t.margin == margin and t.region == region)
+							var atlas_texture: AtlasTexture
 							if not cached_result.is_empty():
 								return cached_result.front()
-							texture = AtlasTexture.new()
-							texture.atlas = export_result.sprite_sheet.atlas
-							texture.filter_clip = true
-							texture.margin = margin
-							texture.region = region
-							texture_cache.append(texture)
-							return texture})
+							atlas_texture = AtlasTexture.new()
+							atlas_texture.atlas = export_result.sprite_sheet.atlas
+							atlas_texture.filter_clip = true
+							atlas_texture.region = region
+							atlas_texture.margin = margin
+							atlas_texture_cache.append(atlas_texture)
+							return atlas_texture})
 
 		_Models.SpriteSheetModel.Layout.HORIZONTAL_STRIPS, \
 		_Models.SpriteSheetModel.Layout.VERTICAL_STRIPS:
 
-			var not_collapsed_sprites_models = export_result.sprite_sheet.sprites \
-				.filter(func(sprite: _Models.SpriteModel): sprite.region.has_area())
+			var not_collapsed_sprites_models: Array[_Models.SpriteModel]
+			for sprite_model in export_result.sprite_sheet.sprites:
+				if sprite_model.region.has_area():
+					not_collapsed_sprites_models.push_back(sprite_model)
 			var typical_sprite_model: _Models.SpriteModel = \
 				_Models.SpriteModel.new() \
 				if not_collapsed_sprites_models.is_empty() else \
@@ -82,30 +97,43 @@ func import(
 			match options[_Options.ANIMATION_STRATEGY]:
 
 				AnimationStrategy.SINGLE_ATLAS_TEXTURE_REGION_AND_MARGIN:
-					atlas_texture.margin = Rect2(typical_sprite_model.offset, typical_sprite_model.offset * 2)
+					var atlas_texture: AtlasTexture = AtlasTexture.new()
+					atlas_texture.atlas = export_result.sprite_sheet.atlas
+					atlas_texture.filter_clip = options[_Options.ATLAS_TEXTURES_REGION_FILTER_CLIP_ENABLED]
+					atlas_texture.resource_local_to_scene = true
+					atlas_texture.region = Rect2(0, 0, 1, 1)
+					atlas_texture.margin = Rect2(
+						typical_sprite_model.offset,
+						typical_sprite_model.offset * 2)
+					texture_rect.texture = atlas_texture
 					animation_player = _create_animation_player(export_result.animation_library, {
-						".:texture:region" : func(frame_model: _Models.FrameModel) -> Rect2i:
-							return frame_model.sprite.region })
+						".:texture:region" : func(frame_model: _Models.FrameModel) -> Rect2:
+							return Rect2(frame_model.sprite.region) })
 
 				AnimationStrategy.MULTIPLE_ATLAS_TEXTURES_INSTANCES:
-					var common_atlas_texture_margin: Rect2 = Rect2(
-						typical_sprite_model.offset,
-						sprite_size - typical_sprite_model.region.size)
-					var texture_cache: Array[AtlasTexture]
+					var atlas_texture_cache: Array[AtlasTexture]
 					animation_player = _create_animation_player(export_result.animation_library, {
 						".:texture": func(frame_model: _Models.FrameModel) -> Texture2D:
-							var region = Rect2(frame_model.sprite.region)
-							var cached_result = texture_cache.filter(func(t: AtlasTexture) -> bool: return t.region == region)
-							var texture: AtlasTexture
+							var region = \
+								Rect2(frame_model.sprite.region) \
+								if frame_model.sprite.region.has_area() else \
+								Rect2(0, 0, 1, 1)
+							var margin: Rect2 = \
+								Rect2() \
+								if frame_model.sprite.region.has_area() else \
+								Rect2(2, 2, 0, 0)
+							var cached_result = atlas_texture_cache.filter(func(t: AtlasTexture) -> bool:
+								return t.region == region and t.margin == margin)
+							var atlas_texture: AtlasTexture
 							if not cached_result.is_empty():
 								return cached_result.front()
-							texture = AtlasTexture.new()
-							texture.atlas = export_result.sprite_sheet.atlas
-							texture.filter_clip = true
-							texture.region = region
-							texture.margin = common_atlas_texture_margin
-							texture_cache.append(texture)
-							return texture})
+							atlas_texture = AtlasTexture.new()
+							atlas_texture.atlas = export_result.sprite_sheet.atlas
+							atlas_texture.filter_clip = true
+							atlas_texture.region = region
+							atlas_texture.margin = margin
+							atlas_texture_cache.append(atlas_texture)
+							return atlas_texture})
 
 	texture_rect.add_child(animation_player)
 	animation_player.owner = texture_rect

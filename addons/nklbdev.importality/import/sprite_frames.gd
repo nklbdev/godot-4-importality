@@ -26,8 +26,14 @@ func import(
 				atlas_texture = AtlasTexture.new()
 				atlas_texture.filter_clip = filter_clip_enabled
 				atlas_texture.atlas = export_result.sprite_sheet.atlas
-				atlas_texture.region = frame_model.sprite.region
-				atlas_texture.margin = Rect2(frame_model.sprite.offset, export_result.sprite_sheet.source_image_size - frame_model.sprite.region.size)
+				if frame_model.sprite.region.has_area():
+					atlas_texture.region = frame_model.sprite.region
+					atlas_texture.margin = Rect2(
+						frame_model.sprite.offset,
+						export_result.sprite_sheet.source_image_size - frame_model.sprite.region.size)
+				else:
+					atlas_texture.region = Rect2i(0, 0, 1, 1)
+					atlas_texture.margin = Rect2(2, 2, 0, 0)
 				atlas_textures[frame_model.sprite.region] = atlas_texture
 			elif atlas_texture == previous_texture:
 				var last_frame_index: int = sprite_frames.get_frame_count(animation_model.name) - 1

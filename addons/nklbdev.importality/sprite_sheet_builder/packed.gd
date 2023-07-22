@@ -125,13 +125,14 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 			(Vector2i.ONE if expand_sprites else Vector2i.ZERO),
 			sprites_sizes[sprite_index])
 		sprite_model.offset = sprites_offsets[sprite_index]
-		sprite_sheet_model.atlas_image.blit_rect(image,
-			Rect2i(sprite_model.offset, sprite_model.region.size),
-			sprite_model.region.position)
-		if extrude_sprites_borders:
-			_extrude_borders(sprite_sheet_model.atlas_image, sprite_model.region)
-		if expand_sprites:
-			sprite_model.region = sprite_model.region.grow(1)
+		if sprite_model.region.has_area():
+			sprite_sheet_model.atlas_image.blit_rect(image,
+				Rect2i(sprite_model.offset, sprite_model.region.size),
+				sprite_model.region.position)
+			if extrude_sprites_borders:
+				_extrude_borders(sprite_sheet_model.atlas_image, sprite_model.region)
+			if expand_sprites:
+				sprite_model.region = sprite_model.region.grow(1)
 	if expand_sprites:
 		sprite_sheet_model.source_image_size += Vector2i.ONE * 2
 	return Result.success(sprite_sheet_model)

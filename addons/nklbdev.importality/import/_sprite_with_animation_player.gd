@@ -24,7 +24,7 @@ func _init(
 	) -> void:
 	options.append_array([
 		_Options.create_option(_Options.ANIMATION_STRATEGY, AnimationStrategy.SPRITE_REGION_AND_OFFSET,
-		PROPERTY_HINT_ENUM, ",".join(ANIMATION_STRATEGIES_NAMES), PROPERTY_USAGE_DEFAULT, _is_layout_packed),
+		PROPERTY_HINT_ENUM, ",".join(ANIMATION_STRATEGIES_NAMES), PROPERTY_USAGE_DEFAULT),
 		_Options.create_option(_Options.SPRITE_CENTERED, false,
 		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 	])

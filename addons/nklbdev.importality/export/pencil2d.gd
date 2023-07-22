@@ -2,9 +2,13 @@ extends "_.gd"
 
 const _XML = preload("../xml.gd")
 
-var __pencil2d_command_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"pencil2d/pencil2d_command", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE,
-	"*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty())
+var __os_command_project_setting: _ProjectSetting = _ProjectSetting.new(
+	"pencil2d_command", "", TYPE_STRING, PROPERTY_HINT_NONE,
+	"", true, func(v: String): return v.is_empty())
+
+var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.new(
+	"pencil2d_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
+	"", true, func(v: PackedStringArray): return false)
 
 const __ANIMATIONS_INFOS_OPTION: StringName = "importers/pencil2d/animations_infos"
 
@@ -13,21 +17,27 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 	super("Pencil2D", recognized_extensions, [
 		_Options.create_option(__ANIMATIONS_INFOS_OPTION, PackedStringArray(),
 		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
-	], editor_file_system, [
-		__pencil2d_command_project_setting,
-	], CustomImageFormatLoaderExtension.new(
+	], editor_file_system,
+	[ __os_command_project_setting, __os_command_arguments_project_setting ],
+	CustomImageFormatLoaderExtension.new(
 		recognized_extensions,
-		_common_temporary_files_directory_path,
-		__pencil2d_command_project_setting))
+		__os_command_project_setting,
+		__os_command_arguments_project_setting,
+		_common_temporary_files_directory_path_project_setting))
 
 func _export(res_source_file_path: String, options: Dictionary) -> _Models.ExportResultModel:
 	var err: Error
 	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
-	var pencil2d_command_result: _ProjectSetting.Result = __pencil2d_command_project_setting.get_value()
-	if pencil2d_command_result.error:
-		return _Models.ExportResultModel.fail(pencil2d_command_result.error, pencil2d_command_result.error_message)
 
-	var temp_dir_path_result: _ProjectSetting.Result = _common_temporary_files_directory_path.get_value()
+	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
+	if os_command_result.error:
+		return _Models.ExportResultModel.fail(os_command_result.error, os_command_result.error_message)
+
+	var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
+	if os_command_arguments_result.error:
+		return _Models.ExportResultModel.fail(os_command_arguments_result.error, os_command_arguments_result.error_message)
+
+	var temp_dir_path_result: _ProjectSetting.Result = _common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
 		return _Models.ExportResultModel.fail(temp_dir_path_result.error, temp_dir_path_result.error_message)
 
@@ -87,7 +97,16 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 		global_source_file_path,
 	])
 
-	err = OS.execute(pencil2d_command_result.value, command_line_params)
+	var output: Array
+	err = OS.execute(
+		os_command_result.value,
+		os_command_arguments_result.value + PackedStringArray([
+			"--export", global_temp_png_path,
+			"--start", 1,
+			"--end", unique_frames_count,
+			"--transparency",
+			global_source_file_path]),
+		output, true, false)
 	if err: return _Models.ExportResultModel.fail(err, "An error occurred while executing the Pencil2D command")
 
 	var frames_images: Array[Image]
@@ -139,15 +158,19 @@ class CustomImageFormatLoaderExtension:
 	extends ImageFormatLoaderExtension
 
 	var __recognized_extensions: PackedStringArray
-	var __common_temporary_files_directory_path: _ProjectSetting
-	var __pencil2d_command_project_setting: _ProjectSetting
+	var __os_command_project_setting: _ProjectSetting
+	var __os_command_arguments_project_setting: _ProjectSetting
+	var __common_temporary_files_directory_path_project_setting: _ProjectSetting
 
 	func _init(recognized_extensions: PackedStringArray,
+		os_command_project_setting: _ProjectSetting,
+		os_command_arguments_project_setting: _ProjectSetting,
 		common_temporary_files_directory_path: _ProjectSetting,
-		pencil2d_command_project_setting: _ProjectSetting) -> void:
+		) -> void:
 		__recognized_extensions = recognized_extensions
-		__common_temporary_files_directory_path = common_temporary_files_directory_path
-		__pencil2d_command_project_setting = pencil2d_command_project_setting
+		__os_command_project_setting = os_command_project_setting
+		__os_command_arguments_project_setting = os_command_arguments_project_setting
+		__common_temporary_files_directory_path_project_setting = common_temporary_files_directory_path
 
 	func _get_recognized_extensions() -> PackedStringArray:
 		return __recognized_extensions
@@ -155,12 +178,17 @@ class CustomImageFormatLoaderExtension:
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
 		var err: Error
 
-		var pencil2d_command_result: _ProjectSetting.Result = __pencil2d_command_project_setting.get_value()
-		if pencil2d_command_result.error:
-			push_error(pencil2d_command_result.error_message)
-			return pencil2d_command_result.error
+		var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
+		if os_command_result.error:
+			push_error(os_command_result.error_message)
+			return os_command_result.error
 
-		var temp_dir_path_result: _ProjectSetting.Result = __common_temporary_files_directory_path.get_value()
+		var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
+		if os_command_arguments_result.error:
+			push_error(os_command_arguments_result.error_message)
+			return os_command_arguments_result.error
+
+		var temp_dir_path_result: _ProjectSetting.Result = __common_temporary_files_directory_path_project_setting.get_value()
 		if temp_dir_path_result.error:
 			push_error(temp_dir_path_result.error_message)
 			return temp_dir_path_result.error
@@ -174,15 +202,17 @@ class CustomImageFormatLoaderExtension:
 				return err
 		var png_base_name: String = "img"
 		var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
-		var command_line_params: PackedStringArray = PackedStringArray([
-			"--export", global_temp_png_path,
-			"--start", 1,
-			"--end", 1,
-			"--transparency",
-			global_source_file_path,
-		])
 
-		err = OS.execute(pencil2d_command_result.value, command_line_params)
+		var output: Array
+		err = OS.execute(
+			os_command_result.value,
+			os_command_arguments_result.value + PackedStringArray([
+				"--export", global_temp_png_path,
+				"--start", 1,
+				"--end", 1,
+				"--transparency",
+				global_source_file_path]),
+			output, true, false)
 		if err:
 			push_error("An error occurred while executing the Pencil2D command")
 			return err

@@ -53,6 +53,8 @@ static func _get_image_hash(image: Image) -> int:
 	return hash
 
 static func _extrude_borders(image: Image, rect: Rect2i) -> void:
+	if not rect.has_area():
+		return
 	# extrude borders
 	# left border
 	image.blit_rect(image,

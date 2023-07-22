@@ -5,23 +5,36 @@ const __sheet_types_by_sprite_sheet_layout: PackedStringArray = \
 const __aseprite_output_animation_directions: PackedStringArray = \
 	[ "forward", "reverse", "pingpong", "pingpong_reverse" ]
 
-var __aseprite_command_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"aseprite/aseprite_command", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_FILE,
-	"*.exe,*.cmd,*.bat", true, func(v: String): return v.is_empty())
+var __os_command_project_setting: _ProjectSetting = _ProjectSetting.new(
+	"aseprite_command", "", TYPE_STRING, PROPERTY_HINT_NONE,
+	"", true, func(v: String): return v.is_empty())
+
+var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.new(
+	"aseprite_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
+	"", true, func(v: PackedStringArray): return false)
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["ase", "aseprite"]
 	super("Aseprite", recognized_extensions, [], editor_file_system,
-		[__aseprite_command_project_setting],
+		[__os_command_project_setting, __os_command_arguments_project_setting],
 		CustomImageFormatLoaderExtension.new(recognized_extensions,
-		__aseprite_command_project_setting))
+		__os_command_project_setting, __os_command_arguments_project_setting))
 
 func _export(res_source_file_path: String, options: Dictionary) -> _Models.ExportResultModel:
-	var aseprite_command_result: _ProjectSetting.Result = __aseprite_command_project_setting.get_value()
-	if aseprite_command_result.error:
-		return _Models.ExportResultModel.fail(aseprite_command_result.error, aseprite_command_result.error_message)
+	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
+	if os_command_result.error:
+		return _Models.ExportResultModel.fail(os_command_result.error, os_command_result.error_message)
+
+	var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
+	if os_command_arguments_result.error:
+		return _Models.ExportResultModel.fail(os_command_arguments_result.error, os_command_arguments_result.error_message)
+
+	var temp_dir_path_result: _ProjectSetting.Result = _common_temporary_files_directory_path_project_setting.get_value()
+	if temp_dir_path_result.error:
+		return _Models.ExportResultModel.fail(temp_dir_path_result.error, temp_dir_path_result.error_message)
+
 	var export_result_model: _Models.ExportResultModel = _Models.ExportResultModel.new()
-	var png_path: String = "res://addons/nklbdev.aseprite_importers/temp.png"
+	var png_path: String = temp_dir_path_result.value.path_join("temp.png")
 	var global_png_path: String = ProjectSettings.globalize_path(png_path)
 	var sprite_sheet_model: _Models.SpriteSheetModel = _Models.SpriteSheetModel.new()
 	export_result_model.sprite_sheet = sprite_sheet_model
@@ -48,23 +61,23 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 	if options[_Options.TRIM_SPRITES_TO_OVERALL_MIN_SIZE]: variable_options += \
 		["--trim" if sprite_sheet_model.layout == _Models.SpriteSheetModel.Layout.PACKED else "--trim-sprite"]
 
-	var command_line_params: PackedStringArray = PackedStringArray([
-		"--batch",
-		"--filename-format", "{tag}{tagframe}",
-		"--format", "json-array",
-		"--list-tags",
-		"--trim" if sprite_sheet_model.layout == _Models.SpriteSheetModel.Layout.PACKED else
-			"--trim-sprite" if options[_Options.TRIM_SPRITES_TO_OVERALL_MIN_SIZE] else "",
-		"--sheet-type", __sheet_types_by_sprite_sheet_layout[sprite_sheet_model.layout],
-		] + variable_options + [
-		"--sheet", global_png_path,
-		ProjectSettings.globalize_path(res_source_file_path)
-	])
-
 	var output: Array = []
-	var err: Error = OS.execute(aseprite_command_result.value, command_line_params, output, true)
-	if err:
-		return _Models.ExportResultModel.fail(err, "An error occurred while executing the Aseprite command")
+	var exit_code: int = OS.execute(
+		os_command_result.value,
+		os_command_arguments_result.value + PackedStringArray([
+			"--batch",
+			"--filename-format", "{tag}{tagframe}",
+			"--format", "json-array",
+			"--list-tags",
+			"--trim" if sprite_sheet_model.layout == _Models.SpriteSheetModel.Layout.PACKED else
+				"--trim-sprite" if options[_Options.TRIM_SPRITES_TO_OVERALL_MIN_SIZE] else "",
+			"--sheet-type", __sheet_types_by_sprite_sheet_layout[sprite_sheet_model.layout],
+			] + variable_options + [
+			"--sheet", global_png_path,
+			ProjectSettings.globalize_path(res_source_file_path)]),
+		output, true, false)
+	if exit_code:
+		return _Models.ExportResultModel.fail(exit_code, "An error occurred while executing the Aseprite command")
 	var json = JSON.new()
 	json.parse(output[0])
 
@@ -136,41 +149,55 @@ class CustomImageFormatLoaderExtension:
 	extends ImageFormatLoaderExtension
 
 	var __recognized_extensions: PackedStringArray
-	var __aseprite_command_project_setting: _ProjectSetting
+	var __os_command_project_setting: _ProjectSetting
+	var __os_command_arguments_project_setting: _ProjectSetting
+	var __common_temporary_files_directory_path_project_setting: _ProjectSetting
 
 	func _init(recognized_extensions: PackedStringArray,
-		aseprite_command_project_setting: _ProjectSetting) -> void:
+		os_command_project_setting: _ProjectSetting,
+		os_command_arguments_project_setting: _ProjectSetting) -> void:
 		__recognized_extensions = recognized_extensions
-		__aseprite_command_project_setting = aseprite_command_project_setting
+		__os_command_project_setting = os_command_project_setting
+		__os_command_arguments_project_setting = os_command_arguments_project_setting
 
 	func _get_recognized_extensions() -> PackedStringArray:
 		return __recognized_extensions
 
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
-		var aseprite_command_result: _ProjectSetting.Result = __aseprite_command_project_setting.get_value()
-		if aseprite_command_result.error:
-			push_error(aseprite_command_result.error_message)
-			return aseprite_command_result.error
+		var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
+		if os_command_result.error:
+			push_error(os_command_result.error_message)
+			return os_command_result.error
+
+		var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
+		if os_command_arguments_result.error:
+			push_error(os_command_arguments_result.error_message)
+			return os_command_arguments_result.error
+
+		var temp_dir_path_result: _ProjectSetting.Result = __common_temporary_files_directory_path_project_setting.get_value()
+		if temp_dir_path_result.error:
+			push_error(temp_dir_path_result.error_message)
+			return temp_dir_path_result.error
 
 		flags = flags as ImageFormatLoader.LoaderFlags
 
 		var source_file_path: String = ProjectSettings.globalize_path(file_access.get_path_absolute())
-		var png_path: String = "res://addons/nklbdev.aseprite_importers/temp.png"
+		var png_path: String = temp_dir_path_result.value.path_join("temp.png")
 		var global_png_path: String = ProjectSettings.globalize_path(png_path)
 
-		var command_line_params: PackedStringArray = PackedStringArray([
-			"--batch",
-			source_file_path,
-			"--frame-range", "0,0",
-			"--save-as",
-			global_png_path
-		])
-
 		var output: Array = []
-		var err: Error = OS.execute(aseprite_command_result.value, command_line_params, output, true)
-		if err:
-			push_error("An error occurred while executing the Aseprite command: %s" % error_string(err))
-			return err
+		var exit_code: int = OS.execute(
+			os_command_result.value,
+			os_command_arguments_result.value + PackedStringArray([
+				"--batch",
+				source_file_path,
+				"--frame-range", "0,0",
+				"--save-as",
+				global_png_path]),
+			output, true, false)
+		if exit_code:
+			push_error("An error occurred while executing the Aseprite command: %s" % error_string(exit_code))
+			return exit_code
 
 		image.load_png_from_buffer(FileAccess.get_file_as_bytes(global_png_path))
 		DirAccess.remove_absolute(global_png_path)

@@ -106,7 +106,12 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 		if _max_cells_in_strip > 0 else sign(unique_sprites_count)
 	grid_size[first_axis] = _max_cells_in_strip if grid_size[second_axis] > 1 else unique_sprites_count
 
-	var atlas_size: Vector2i = grid_size * sprite_sheet_model.source_image_size
+	var image_region: Rect2i = \
+		max_image_used_rect \
+		if _trim_sprites_to_overall_min_size else \
+		Rect2i(Vector2i.ZERO, sprite_sheet_model.source_image_size)
+
+	var atlas_size: Vector2i = grid_size * image_region.size
 	match _edges_artifacts_avoidance_method:
 		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.NONE:
 			pass
@@ -125,14 +130,6 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 	if _edges_artifacts_avoidance_method == _Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
 		atlas.fill(_sprites_surrounding_color)
 
-	var image_region: Rect2i = \
-		max_image_used_rect \
-		if _trim_sprites_to_overall_min_size else \
-		Rect2i(Vector2i.ZERO, sprite_sheet_model.source_image_size)
-	var extrude_sprites_borders: bool = _edges_artifacts_avoidance_method == \
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION
-	var expand_sprites: bool = _edges_artifacts_avoidance_method == \
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION
 	var cell: Vector2i
 	var cell_index: int
 	for sprite_index in unique_sprites_indices:
@@ -140,13 +137,14 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 		var sprite_model: _Models.SpriteModel = sprite_sheet_model.sprites[sprite_index]
 		if sprite_model == collapsed_sprite:
 			continue
-		sprite_model.region.size = sprite_sheet_model.source_image_size
+		sprite_model.region.size = image_region.size
+		sprite_model.offset = image_region.position
 		var image: Image = images[sprite_index]
 		cell[first_axis] = cell_index % _max_cells_in_strip if _max_cells_in_strip > 0 else cell_index
 		cell[second_axis] = cell_index / _max_cells_in_strip if _max_cells_in_strip > 0 else 0
 		sprite_sheet_model.strips_count = max(sprite_sheet_model.strips_count, cell[first_axis])
 		sprite_sheet_model.cells_in_strip_count = max(sprite_sheet_model.cells_in_strip_count, cell[second_axis])
-		sprite_model.region.position = cell * sprite_sheet_model.source_image_size
+		sprite_model.region.position = cell * image_region.size
 		match _edges_artifacts_avoidance_method:
 			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_SPACING:
 				sprite_model.region.position += cell
@@ -155,15 +153,15 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
 				sprite_model.region.position += cell * 2 + Vector2i.ONE
 			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
-				sprite_model.region.position += cell * 2 + Vector2i.ONE
+				pass
 		atlas.blit_rect(image, image_region, sprite_model.region.position +
-			(Vector2i.ONE if expand_sprites else Vector2i.ZERO))
-		if extrude_sprites_borders:
-			_extrude_borders(atlas, sprite_model.region)
-		if expand_sprites:
-			sprite_model.region = sprite_model.region.grow(1)
+			(Vector2i.ONE
+			if _edges_artifacts_avoidance_method == \
+				_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION else
+			Vector2i.ZERO))
+		match _edges_artifacts_avoidance_method:
+			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
+				_extrude_borders(atlas, sprite_model.region)
 		cell_index += 1
-	if expand_sprites:
-		sprite_sheet_model.source_image_size += Vector2i.ONE * 2
 
 	return Result.success(sprite_sheet_model)

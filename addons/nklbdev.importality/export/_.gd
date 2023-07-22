@@ -28,13 +28,13 @@ class _AnimationInfo:
 	func _to_string() -> String:
 		return "AnimationInfo(name: %s, first_frame: %s, last_frame: %s, direction: %s, repeat_count: %s)" % [name, first_frame, last_frame, direction, repeat_count]
 
-var _common_temporary_files_directory_path: _ProjectSetting = _ProjectSetting.new(
-	"common/temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
+var _common_temporary_files_directory_path_project_setting: _ProjectSetting = _ProjectSetting.new(
+	"temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
 	"", true, func(v: String): return v.is_empty())
 
 var __name: String
 var __recognized_extensions: PackedStringArray
-var __project_settings: Array[_ProjectSetting] = [_common_temporary_files_directory_path]
+var __project_settings: Array[_ProjectSetting] = [_common_temporary_files_directory_path_project_setting]
 var __editor_file_system: EditorFileSystem
 var __options: Array[Dictionary] = [
 	_Options.create_option(_Options.ATLAS_RESOURCE_TYPE, AtlasResourceType.EMBEDDED_PORTABLE_COMPRESSED_TEXTURE_2D,
