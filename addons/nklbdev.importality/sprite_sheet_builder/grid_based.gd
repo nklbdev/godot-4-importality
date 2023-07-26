@@ -14,7 +14,7 @@ var _collapse_transparent: bool
 var _merge_duplicates: bool
 
 func _init(
-	edges_artifacts_avoidance_method: _Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod,
+	edges_artifacts_avoidance_method: _Common.EdgesArtifactsAvoidanceMethod,
 	strips_direction: StripDirection,
 	max_cells_in_strip: int,
 	trim_sprites_to_overall_min_size: bool,
@@ -30,23 +30,21 @@ func _init(
 	_merge_duplicates = merge_duplicates
 
 func build_sprite_sheet(images: Array[Image]) -> Result:
+	var result: Result = Result.new()
 	var images_count: int = images.size()
 
-	var sprite_sheet_model: _Models.SpriteSheetModel = _Models.SpriteSheetModel.new()
-	sprite_sheet_model.edges_artifacts_avoidance_method = _edges_artifacts_avoidance_method
-	sprite_sheet_model.layout = \
-		_Models.SpriteSheetModel.Layout.HORIZONTAL_STRIPS \
-		if _strips_direction == StripDirection.HORIZONTAL else \
-		_Models.SpriteSheetModel.Layout.VERTICAL_STRIPS
+	var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
 
 	if images_count == 0:
-		return Result.success(sprite_sheet_model)
+		result.success(sprite_sheet)
+		return result
 
-	sprite_sheet_model.source_image_size = images.front().get_size()
-	if not images.all(func(i: Image) -> bool: return i.get_size() == sprite_sheet_model.source_image_size):
-		return Result.fail(ERR_INVALID_DATA, "Input images have different sizes")
+	sprite_sheet.source_image_size = images.front().get_size()
+	if not images.all(func(i: Image) -> bool: return i.get_size() == sprite_sheet.source_image_size):
+		result.fail(ERR_INVALID_DATA, "Input images have different sizes")
+		return result
 
-	sprite_sheet_model.sprites.resize(images_count)
+	sprite_sheet.sprites.resize(images_count)
 
 	var first_axis: int = _strips_direction
 	var second_axis: int = 1 - first_axis
@@ -55,7 +53,7 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 	var images_infos_cache: Dictionary # of arrays of images indices by image hashes
 
 	var unique_sprites_indices: Array[int]
-	var collapsed_sprite: _Models.SpriteModel = _Models.SpriteModel.new()
+	var collapsed_sprite: _Common.SpriteInfo = _Common.SpriteInfo.new()
 	var images_used_rects: Array[Rect2i]
 
 	for image_index in images_count:
@@ -64,7 +62,7 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 		var is_image_invisible: bool = not image_used_rect.has_area()
 
 		if _collapse_transparent and is_image_invisible:
-			sprite_sheet_model.sprites[image_index] = collapsed_sprite
+			sprite_sheet.sprites[image_index] = collapsed_sprite
 			continue
 		elif _merge_duplicates:
 			var image_hash: int = _get_image_hash(image)
@@ -74,8 +72,8 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 			for similar_image_index in similar_images_indices:
 				var similar_image: Image = images[similar_image_index]
 				if image == similar_image or image.get_data() == similar_image.get_data():
-					sprite_sheet_model.sprites[image_index] = \
-						sprite_sheet_model.sprites[similar_image_index]
+					sprite_sheet.sprites[image_index] = \
+						sprite_sheet.sprites[similar_image_index]
 					is_duplicate_found = true
 					break
 			if similar_images_indices.is_empty():
@@ -84,9 +82,9 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 			if is_duplicate_found:
 				continue
 
-		var sprite_model: _Models.SpriteModel = _Models.SpriteModel.new()
-		sprite_model.region = image_used_rect
-		sprite_sheet_model.sprites[image_index] = sprite_model
+		var sprite: _Common.SpriteInfo = _Common.SpriteInfo.new()
+		sprite.region = image_used_rect
+		sprite_sheet.sprites[image_index] = sprite
 		unique_sprites_indices.push_back(image_index)
 		if not is_image_invisible:
 			max_image_used_rect = \
@@ -96,72 +94,78 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 
 	var unique_sprites_count: int = unique_sprites_indices.size()
 
-	if _edges_artifacts_avoidance_method == _Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
-		sprite_sheet_model.source_image_size += Vector2i.ONE * 2
+	if _edges_artifacts_avoidance_method == _Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
+		sprite_sheet.source_image_size += Vector2i.ONE * 2
 
 	var grid_size: Vector2i
 	grid_size[second_axis] = \
 		unique_sprites_count / _max_cells_in_strip + \
 		sign(unique_sprites_count % _max_cells_in_strip) \
 		if _max_cells_in_strip > 0 else sign(unique_sprites_count)
-	grid_size[first_axis] = _max_cells_in_strip if grid_size[second_axis] > 1 else unique_sprites_count
+	grid_size[first_axis] = \
+		_max_cells_in_strip \
+		if grid_size[second_axis] > 1 else \
+		unique_sprites_count
 
 	var image_region: Rect2i = \
 		max_image_used_rect \
 		if _trim_sprites_to_overall_min_size else \
-		Rect2i(Vector2i.ZERO, sprite_sheet_model.source_image_size)
+		Rect2i(Vector2i.ZERO, sprite_sheet.source_image_size)
+	if _edges_artifacts_avoidance_method == _Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
+		image_region = image_region.grow(1)
 
 	var atlas_size: Vector2i = grid_size * image_region.size
 	match _edges_artifacts_avoidance_method:
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.NONE:
+		_Common.EdgesArtifactsAvoidanceMethod.NONE:
 			pass
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_SPACING:
+		_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_SPACING:
 			atlas_size += grid_size - Vector2i.ONE
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
+		_Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
 			atlas_size += grid_size + Vector2i.ONE
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
+		_Common.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
 			atlas_size += grid_size * 2
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
+		_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
 			pass
 
 	var atlas = Image.create(atlas_size.x, atlas_size.y, false, Image.FORMAT_RGBA8)
-	sprite_sheet_model.atlas_image = atlas
+	sprite_sheet.atlas_image = atlas
 
-	if _edges_artifacts_avoidance_method == _Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
+	if _edges_artifacts_avoidance_method == _Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
 		atlas.fill(_sprites_surrounding_color)
 
 	var cell: Vector2i
 	var cell_index: int
 	for sprite_index in unique_sprites_indices:
 		# calculate cell
-		var sprite_model: _Models.SpriteModel = sprite_sheet_model.sprites[sprite_index]
-		if sprite_model == collapsed_sprite:
+		var sprite: _Common.SpriteInfo = sprite_sheet.sprites[sprite_index]
+		if sprite == collapsed_sprite:
 			continue
-		sprite_model.region.size = image_region.size
-		sprite_model.offset = image_region.position
+		sprite.region.size = image_region.size
+		sprite.offset = image_region.position
 		var image: Image = images[sprite_index]
 		cell[first_axis] = cell_index % _max_cells_in_strip if _max_cells_in_strip > 0 else cell_index
 		cell[second_axis] = cell_index / _max_cells_in_strip if _max_cells_in_strip > 0 else 0
-		sprite_sheet_model.strips_count = max(sprite_sheet_model.strips_count, cell[first_axis])
-		sprite_sheet_model.cells_in_strip_count = max(sprite_sheet_model.cells_in_strip_count, cell[second_axis])
-		sprite_model.region.position = cell * image_region.size
+		sprite_sheet.strips_count = max(sprite_sheet.strips_count, cell[first_axis])
+		sprite_sheet.cells_in_strip_count = max(sprite_sheet.cells_in_strip_count, cell[second_axis])
+		sprite.region.position = cell * image_region.size
 		match _edges_artifacts_avoidance_method:
-			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_SPACING:
-				sprite_model.region.position += cell
-			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
-				sprite_model.region.position += cell + Vector2i.ONE
-			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
-				sprite_model.region.position += cell * 2 + Vector2i.ONE
-			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
+			_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_SPACING:
+				sprite.region.position += cell
+			_Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
+				sprite.region.position += cell + Vector2i.ONE
+			_Common.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
+				sprite.region.position += cell * 2 + Vector2i.ONE
+			_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
 				pass
-		atlas.blit_rect(image, image_region, sprite_model.region.position +
-			(Vector2i.ONE
-			if _edges_artifacts_avoidance_method == \
-				_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION else
-			Vector2i.ZERO))
+		atlas.blit_rect(image, image_region, sprite.region.position)# +
+			#(Vector2i.ONE
+			#if _edges_artifacts_avoidance_method == \
+			#	_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION else
+			#Vector2i.ZERO))
 		match _edges_artifacts_avoidance_method:
-			_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
-				_extrude_borders(atlas, sprite_model.region)
+			_Common.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
+				_extrude_borders(atlas, sprite.region)
 		cell_index += 1
 
-	return Result.success(sprite_sheet_model)
+	result.success(sprite_sheet)
+	return result

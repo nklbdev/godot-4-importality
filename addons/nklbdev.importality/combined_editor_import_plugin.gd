@@ -1,6 +1,6 @@
 extends EditorImportPlugin
 
-const _Models = preload("models.gd")
+const _Common = preload("common.gd")
 const _Exporter = preload("export/_.gd")
 const _Importer = preload("import/_.gd")
 
@@ -40,16 +40,16 @@ func _import(
 	platform_variants: Array[String],
 	gen_files: Array[String]
 	) -> Error:
-	var export_result: _Models.ExportResultModel = \
+	var export_result: _Common.ExportResult = \
 		__exporter.export(source_file, options, self)
-	if export_result.status:
-		push_error("Export is failed. Error: %s, Message: %s" % [error_string(export_result.status), export_result.error_description])
-		return export_result.status
-	var import_result: _Models.ImportResultModel = \
+	if export_result.error:
+		push_error("Export is failed. Errors chain:\n%s" % [export_result])
+		return export_result.error
+	var import_result: _Common.ImportResult = \
 		__importer.import(source_file, export_result, options, save_path)
-	if import_result.status:
-		push_error("Import is failed. Error: %s, Message: %s" % [error_string(import_result.status), import_result.error_description])
-		return import_result.status
+	if import_result.error:
+		push_error("Import is failed. Errors chain:\n%s" % [import_result])
+		return import_result.error
 	return ResourceSaver.save(
 		import_result.resource,
 		"%s.%s" % [save_path, _get_save_extension()],

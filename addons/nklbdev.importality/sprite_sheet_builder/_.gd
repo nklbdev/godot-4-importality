@@ -1,31 +1,25 @@
-extends Object
+extends RefCounted
 
-const _Models = preload("../models.gd")
+const _Common = preload("../common.gd")
 
-var _edges_artifacts_avoidance_method: _Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod
+var _edges_artifacts_avoidance_method: _Common.EdgesArtifactsAvoidanceMethod
 var _sprites_surrounding_color: Color
 
 func _init(
-	edges_artifacts_avoidance_method: _Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod,
+	edges_artifacts_avoidance_method: _Common.EdgesArtifactsAvoidanceMethod,
 	sprites_surrounding_color: Color = Color.TRANSPARENT
 	) -> void:
 	_edges_artifacts_avoidance_method = edges_artifacts_avoidance_method
 	_sprites_surrounding_color = sprites_surrounding_color
 
 class Result:
-	var error: Error
-	var error_message: String
-	var sprite_sheet: _Models.SpriteSheetModel
-	static func success(sprite_sheet: _Models.SpriteSheetModel) -> Result:
-		var result = Result.new()
-		result.sprite_sheet = sprite_sheet
-		return result
-
-	static func fail(error: Error, error_message: String = "") -> Result:
-		var result = Result.new()
-		result.error = error
-		result.error_message = error_message
-		return result
+	extends _Common.Result
+	var sprite_sheet: _Common.SpriteSheetInfo
+	func _get_result_type_description() -> String:
+		return "Sprite sheet building"
+	func success(sprite_sheet: _Common.SpriteSheetInfo) -> void:
+		_success()
+		self.sprite_sheet = sprite_sheet
 
 func build_sprite_sheet(images: Array[Image]) -> Result:
 	assert(false, "This method is abstract and must be overriden.")

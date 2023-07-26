@@ -2,28 +2,24 @@
 # Copyright (c) 2018 Brandon Semilla (MIT License) - original author
 # Copyright (c) 2023 Nikolay Lebedev (MIT License) - porting to gdscript, refactoring and optimization
 
+const _Common = preload("common.gd")
+
 const __WHITESPACE_WEIGHT: float = 1
 const __SIDE_LENGTH_WEIGHT: float = 10
 
 class Result:
-	var error: Error
-	var error_message: String
+	extends _Common.Result
 	# Total size of the entire layout of rectangles.
 	var bounds: Vector2i
 	# Computed positions of the input rectangles
 	# in the same order as their sizes were passed in.
 	var rects_positions: Array[Vector2i]
-	static func success(bounds: Vector2i, rects_positions: Array[Vector2i]) -> Result:
-		var result = Result.new()
-		result.bounds = bounds
-		result.rects_positions = rects_positions
-		return result
-
-	static func fail(error: Error, error_message: String = "") -> Result:
-		var result = Result.new()
-		result.error = error
-		result.error_message = error_message
-		return result
+	func _get_result_type_description() -> String:
+		return "Rect packing"
+	func success(bounds: Vector2i, rects_positions: Array[Vector2i]) -> void:
+		_success()
+		self.bounds = bounds
+		self.rects_positions = rects_positions
 
 static func __add_rect_to_cache(rect: Rect2i, cache: Dictionary, cache_grid_size: Vector2i) -> void:
 	var left_top_cell: Vector2i = rect.position / cache_grid_size
@@ -49,20 +45,24 @@ static func __has_intersection(rect: Rect2i, cache: Dictionary, cache_grid_size:
 
 # The function takes an array of rectangle sizes as input and compactly packs them.
 static func pack(rects_sizes: Array[Vector2i]) -> Result:
+	var result: Result = Result.new()
 	var rects_count: int = rects_sizes.size()
 	if rects_count == 0:
-		return Result.success(Vector2i.ZERO, [])
+		result.success(Vector2i.ZERO, [])
+		return result
 	var rects_positions: Array[Vector2i]
 	rects_positions.resize(rects_count)
 	var min_area: int
 	var rect_sizes_sum: Vector2i
 	for size in rects_sizes:
 		if size.x < 0 or size.y < 0:
-			return Result.fail(ERR_INVALID_DATA, "Negative rect size found")
+			result.fail(ERR_INVALID_DATA, "Negative rect size found")
+			return result
 		min_area += size.x * size.y
 		rect_sizes_sum += size
 	if min_area == 0:
-		return Result.success(Vector2i.ZERO, rects_positions)
+		result.success(Vector2i.ZERO, rects_positions)
+		return result
 	var average_rect_size: Vector2 = Vector2(rect_sizes_sum) / rects_count
 	var rect_cache_grid_size: Vector2i = average_rect_size.ceil() * 2
 	var average_squared_rect_side_length: float = sqrt(min_area / float(rects_count))
@@ -132,4 +132,5 @@ static func pack(rects_sizes: Array[Vector2i]) -> Result:
 			elif splits[split_index] != position:
 				splits.insert(split_index, position)
 
-	return Result.success(bounds, rects_positions)
+	result.success(bounds, rects_positions)
+	return result

@@ -1,4 +1,6 @@
-extends Object
+extends RefCounted
+
+const _Common = preload("common.gd")
 
 var __name: StringName
 var __initial_value: Variant
@@ -42,24 +44,20 @@ func register() -> void:
 	ProjectSettings.add_property_info(property_info)
 
 class Result:
-	var error: Error
-	var error_message: String
+	extends _Common.Result
 	var value: Variant
-	static func success(value: Variant) -> Result:
-		var result = Result.new()
-		result.value = value
-		return result
-	static func fail(error: Error, error_message: String = "") -> Result:
-		var result = Result.new()
-		result.error = error
-		result.error_message = error_message
-		return result
+	func success(value: Variant) -> void:
+		_success()
+		self.value = value
 
 func get_value() -> Result:
+	var result = Result.new()
 	var value = ProjectSettings.get_setting(__name)
 	if __is_required:
 		if __is_value_empty_func.call(value):
-			return Result.fail(ERR_UNCONFIGURED,
+			result.fail(ERR_UNCONFIGURED,
 				"The project settging \"%s\" is not specified!" % [__name] + \
 				"Specify it in Projest Settings -> General -> Importality.")
-	return Result.success(value)
+			return result
+	result.success(value)
+	return result

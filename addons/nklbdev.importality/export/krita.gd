@@ -18,40 +18,47 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
 func __validate_image_name(image_name: String) -> bool:
+	push_error("not implemented!!!")
 	return true
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Models.ExportResultModel:
+func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+	var result: _Common.ExportResult = _Common.ExportResult.new()
+
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 	if os_command_result.error:
-		return _Models.ExportResultModel.fail(os_command_result.error, os_command_result.error_message)
+		result.fail(ERR_UNCONFIGURED, "Unable to get Krita Command to export spritesheet", os_command_result)
+		return result
 
 	var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
 	if os_command_arguments_result.error:
-		return _Models.ExportResultModel.fail(os_command_arguments_result.error, os_command_arguments_result.error_message)
+		result.fail(ERR_UNCONFIGURED, "Unable to get Krita Command Arguments to export spritesheet", os_command_arguments_result)
+		return result
 
 	var temp_dir_path_result: _ProjectSetting.Result = _common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
-		return _Models.ExportResultModel.fail(temp_dir_path_result.error, temp_dir_path_result.error_message)
+		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
+		return result
 
 	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
 
 	var zip_reader: ZIPReader = ZIPReader.new()
 	var zip_error: Error = zip_reader.open(global_source_file_path)
-	if zip_error: return _Models.ExportResultModel.fail(zip_error, "Unable to open Krita file as ZIP archive")
+	if zip_error:
+		result.fail(zip_error, "Unable to open Krita file \"%s\" as ZIP archive with error: %s (%s)" % [res_source_file_path, zip_error, error_string(zip_error)])
+		return result
+
 	var files_names_in_zip: PackedStringArray = zip_reader.get_files()
 
 	var maindoc_filename: String = "maindoc.xml"
-	var buf: PackedByteArray = zip_reader.read_file(maindoc_filename)
-	var maindoc_xml_root: _XML.XMLNodeRoot = _XML.parse_buffer(buf)
+	var maindoc_buffer: PackedByteArray = zip_reader.read_file(maindoc_filename)
+	var maindoc_xml_root: _XML.XMLNodeRoot = _XML.parse_buffer(maindoc_buffer)
 	var maindoc_doc_xml_element: _XML.XMLNodeElement = maindoc_xml_root.get_elements("DOC").front()
 
 	var image_xml_element: _XML.XMLNodeElement = maindoc_doc_xml_element.get_elements("IMAGE").front()
 	var image_name: String = image_xml_element.get_string("name")
 	var image_size: Vector2i = image_xml_element.get_vector2i("width", "height")
 	if not __validate_image_name(image_name):
-		var result = _Models.ExportResultModel.new()
-		result.status = ERR_INVALID_DATA
-		result.error_description = "Image name have unsupported format"
+		result.fail(ERR_INVALID_DATA, "Image name have unsupported format")
 		return result
 
 	var has_keyframes: bool
@@ -60,23 +67,22 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 			has_keyframes = true
 			break
 	if not has_keyframes:
-		var sh: _Models.SpriteSheetModel = _Models.SpriteSheetModel.new()
-		sh.edges_artifacts_avoidance_method = options[_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD]
-		sh.atlas_image = Image.create(1, 1, false, Image.FORMAT_RGBA8)
-		sh.layout = options[_Options.SPRITE_SHEET_LAYOUT]
-		sh.source_image_size = image_size
-		sh.strips_count = 0
-		sh.cells_in_strip_count = 0
+		var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
+		sprite_sheet.atlas_image = Image.create(1, 1, false, Image.FORMAT_RGBA8)
+		sprite_sheet.source_image_size = image_size
+		sprite_sheet.strips_count = 0
+		sprite_sheet.cells_in_strip_count = 0
 
-		var al: _Models.AnimationLibraryModel = _Models.AnimationLibraryModel.new()
-		var an: _Models.AnimationModel = _Models.AnimationModel.new()
-		an.name = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
-		if not an.name:
-			an.name = "default"
-		an.direction = options[_Options.DEFAULT_ANIMATION_DIRECTION]
-		an.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
-		al.animations.push_back(an)
-		return _Models.ExportResultModel.success(sh, al)
+		var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
+		var default_animation: _Common.AnimationInfo = _Common.AnimationInfo.new()
+		default_animation.name = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
+		if not default_animation.name:
+			default_animation.name = "default"
+		default_animation.direction = options[_Options.DEFAULT_ANIMATION_DIRECTION]
+		default_animation.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
+		animation_library.animations.push_back(default_animation)
+		result.success(sprite_sheet, animation_library)
+		return result
 
 
 	var animation_xml_element: _XML.XMLNodeElement = image_xml_element.get_elements("animation").front()
@@ -84,18 +90,18 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 	var animation_range_xml_element: _XML.XMLNodeElement = animation_xml_element.get_elements("range").front()
 
 	var animation_index_filename: String = "%s/animation/index.xml" % image_name
-	buf = zip_reader.read_file(animation_index_filename)
-	var animation_index_xml_root: _XML.XMLNodeRoot = _XML.parse_buffer(buf)
+	var animation_index_buffer: PackedByteArray = zip_reader.read_file(animation_index_filename)
+	var animation_index_xml_root: _XML.XMLNodeRoot = _XML.parse_buffer(animation_index_buffer)
 	var animation_index_animation_metadata_xml_element: _XML.XMLNodeElement = animation_index_xml_root.get_elements("animation-metadata").front()
 	var animation_index_animation_metadata_range_xml_element: _XML.XMLNodeElement = animation_index_animation_metadata_xml_element.get_elements("range").front()
 	var export_settings_xml_element: _XML.XMLNodeElement = animation_index_animation_metadata_xml_element.get_elements("export-settings").front()
 	var sequence_file_path_xml_element: _XML.XMLNodeElement = export_settings_xml_element.get_elements("sequenceFilePath").front()
 	var sequence_base_name_xml_element: _XML.XMLNodeElement = export_settings_xml_element.get_elements("sequenceBaseName").front()
 
-	var animations_infos: Array[_AnimationInfo]
+	var animations_parameters_parsing_results: Array[AnimationParamsParsingResult]
 	var total_animations_frames_count: int
-	var first_animations_frame: int = -1
-	var last_animations_frame: int = -1
+	var first_animations_frame_index: int = -1
+	var last_animations_frame_index: int = -1
 	var png_base_name: String = "img"
 	var global_temp_kra_path: String
 	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
@@ -107,31 +113,43 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 		var storyboard_info_xml_element: _XML.XMLNodeElement = storyboard_index_xml_root.get_elements("storyboard-info").front()
 		var storyboard_item_list_xml_element: _XML.XMLNodeElement = storyboard_info_xml_element.get_elements("StoryboardItemList").front()
 		var storyboard_item_xml_elements: Array[_XML.XMLNodeElement] = storyboard_item_list_xml_element.get_elements("storyboarditem")
+		var unique_animations_names: PackedStringArray
 
-		for story_xml_element in storyboard_item_xml_elements:
+		for animation_index in storyboard_item_xml_elements.size():
+			var story_xml_element: _XML.XMLNodeElement = storyboard_item_xml_elements[animation_index]
 			var animation_first_frame: int = story_xml_element.get_int("frame")
-			var animation_info: _AnimationInfo = _parse_animation_info(
+			var animation_params_parsing_result: AnimationParamsParsingResult = _parse_animation_params(
 				story_xml_element.get_string("item-name").strip_edges(),
-				AnimationOption.Direction | AnimationOption.RepeatCount,
+				AnimationOptions.Direction | AnimationOptions.RepeatCount,
 				animation_first_frame,
-				animation_first_frame + story_xml_element.get_int("duration-frame") + \
-				animation_framerate * story_xml_element.get_int("duration-second") - 1)
-			animations_infos.push_back(animation_info)
-			total_animations_frames_count += animation_info.last_frame - animation_info.first_frame + 1
-			if first_animations_frame < 0 or animation_info.first_frame < first_animations_frame:
-				first_animations_frame = animation_info.first_frame
-			if last_animations_frame < 0 or animation_info.last_frame > last_animations_frame:
-				last_animations_frame = animation_info.last_frame
+				story_xml_element.get_int("duration-frame") + \
+				animation_framerate * story_xml_element.get_int("duration-second"))
+			if animation_params_parsing_result.error:
+				result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters",
+					animation_params_parsing_result)
+				return result
+			if unique_animations_names.has(animation_params_parsing_result.name):
+				result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %
+					[animation_params_parsing_result.name, animation_index])
+				return result
+			unique_animations_names.push_back(animation_params_parsing_result.name)
+			animations_parameters_parsing_results.push_back(animation_params_parsing_result)
+			total_animations_frames_count += animation_params_parsing_result.frames_count
+			if first_animations_frame_index < 0 or animation_params_parsing_result.first_frame_index < first_animations_frame_index:
+				first_animations_frame_index = animation_params_parsing_result.first_frame_index
+			var animation_last_frame_index: int = animation_params_parsing_result.first_frame_index + animation_params_parsing_result.frames_count - 1
+			if last_animations_frame_index < 0 or animation_last_frame_index > last_animations_frame_index:
+				last_animations_frame_index = animation_last_frame_index
 
-		animation_range_xml_element.attributes["from"] = str(first_animations_frame)
-		animation_range_xml_element.attributes["to"] = str(last_animations_frame)
+		animation_range_xml_element.attributes["from"] = str(first_animations_frame_index)
+		animation_range_xml_element.attributes["to"] = str(last_animations_frame_index)
 
 		var temp_kra_base_name: String = "img"
 		var temp_kra_file_name: String = temp_kra_base_name + ".kra"
 		global_temp_kra_path = temp_dir_path_result.value.path_join(temp_kra_file_name)
 
-		animation_index_animation_metadata_range_xml_element.attributes["from"] = str(first_animations_frame)
-		animation_index_animation_metadata_range_xml_element.attributes["to"] = str(last_animations_frame)
+		animation_index_animation_metadata_range_xml_element.attributes["from"] = str(first_animations_frame_index)
+		animation_index_animation_metadata_range_xml_element.attributes["to"] = str(last_animations_frame_index)
 
 		var zip_writer = ZIPPacker.new()
 		zip_writer.open(global_temp_kra_path, ZIPPacker.APPEND_CREATE)
@@ -139,27 +157,25 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 			zip_writer.start_file(filename)
 			match filename:
 				maindoc_filename:
-					buf = maindoc_xml_root.dump_to_buffer()
-					zip_writer.write_file(buf)
+					zip_writer.write_file(maindoc_xml_root.dump_to_buffer())
 				animation_index_filename:
-					buf = animation_index_xml_root.dump_to_buffer()
-					zip_writer.write_file(buf)
+					zip_writer.write_file(animation_index_xml_root.dump_to_buffer())
 				_: zip_writer.write_file(zip_reader.read_file(filename))
 			zip_writer.close_file()
 		zip_writer.close()
 	else:
-		first_animations_frame = animation_range_xml_element.get_int("from")
-		last_animations_frame = animation_range_xml_element.get_int("to")
-		total_animations_frames_count = last_animations_frame - first_animations_frame + 1
-		var default_animation_info: _AnimationInfo = _AnimationInfo.new()
-		default_animation_info.name = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
-		if not default_animation_info.name:
-			default_animation_info.name = "default"
-		default_animation_info.first_frame = first_animations_frame
-		default_animation_info.last_frame = last_animations_frame
-		default_animation_info.direction = options[_Options.DEFAULT_ANIMATION_DIRECTION]
-		default_animation_info.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
-		animations_infos.push_back(default_animation_info)
+		first_animations_frame_index = animation_range_xml_element.get_int("from")
+		last_animations_frame_index = animation_range_xml_element.get_int("to")
+		total_animations_frames_count = last_animations_frame_index - first_animations_frame_index + 1
+		var default_animation_params_parsing_result: AnimationParamsParsingResult = AnimationParamsParsingResult.new()
+		default_animation_params_parsing_result.name = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
+		if not default_animation_params_parsing_result.name:
+			default_animation_params_parsing_result.name = "default"
+		default_animation_params_parsing_result.first_frame_index = first_animations_frame_index
+		default_animation_params_parsing_result.frames_count = last_animations_frame_index - first_animations_frame_index + 1
+		default_animation_params_parsing_result.direction = options[_Options.DEFAULT_ANIMATION_DIRECTION]
+		default_animation_params_parsing_result.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
+		animations_parameters_parsing_results.push_back(default_animation_params_parsing_result)
 		global_temp_kra_path = global_source_file_path
 
 	zip_reader.close()
@@ -182,13 +198,14 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 			global_temp_kra_path]),
 		output, true, false)
 	if exit_code:
-		return _Models.ExportResultModel.fail(exit_code, "An error occurred while executing the Krita command")
+		result.fail(ERR_QUERY_FAILED, "An error occurred while executing the Krita command. Process exited with code %s" % [exit_code])
+		return result
 
 	if global_temp_kra_path != global_source_file_path:
 		DirAccess.remove_absolute(global_temp_kra_path)
 		pass
 
-	var unique_frames_count: int = last_animations_frame + 1 # - first_stories_frame
+	var unique_frames_count: int = last_animations_frame_index + 1 # - first_stories_frame
 	var frames_images: Array[Image]
 	for image_idx in unique_frames_count:
 		var global_frame_png_path: String = temp_dir_path_result.value \
@@ -203,38 +220,40 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 
 	var sprite_sheet_building_result: _SpriteSheetBuilderBase.Result = sprite_sheet_builder.build_sprite_sheet(frames_images)
 	if sprite_sheet_building_result.error:
-		return _Models.ExportResultModel.fail(sprite_sheet_building_result.error,
-			"Sprite sheet building failed: " + sprite_sheet_building_result.error_message)
-	var sprite_sheet_model: _Models.SpriteSheetModel = sprite_sheet_building_result.sprite_sheet
+		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
+		return result
+	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
 
-	var animation_library_model: _Models.AnimationLibraryModel = _Models.AnimationLibraryModel.new()
+	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
 
 	var frames_duration: float = 1.0 / animation_framerate
-	var all_frames: Array[_Models.FrameModel]
+	var all_frames: Array[_Common.FrameInfo]
 	all_frames.resize(unique_frames_count)
-	for animation_index in animations_infos.size():
-		var animation_info: _AnimationInfo = animations_infos[animation_index]
-		var animation_model = _Models.AnimationModel.new()
-		animation_model.name = animation_info.name
-		if animation_info.name == autoplay_animation_name:
-			animation_library_model.autoplay_animation_index = animation_index
-		animation_model.direction = animation_info.direction
-		animation_model.repeat_count = animation_info.repeat_count
-		for global_frame_index in range(animation_info.first_frame, animation_info.last_frame + 1):
-			var frame_model: _Models.FrameModel = all_frames[global_frame_index]
-			if frame_model == null:
-				frame_model = _Models.FrameModel.new()
-				frame_model.sprite = sprite_sheet_model.sprites[global_frame_index]
-				frame_model.duration = frames_duration
-				all_frames[global_frame_index] = frame_model
-			animation_model.frames.push_back(frame_model)
-		animation_library_model.animations.push_back(animation_model)
+	for animation_index in animations_parameters_parsing_results.size():
+		var animation_params_parsing_result: AnimationParamsParsingResult = animations_parameters_parsing_results[animation_index]
+		var animation = _Common.AnimationInfo.new()
+		animation.name = animation_params_parsing_result.name
+		if animation.name == autoplay_animation_name:
+			animation_library.autoplay_animation_index = animation_index
+		animation.direction = animation_params_parsing_result.direction
+		animation.repeat_count = animation_params_parsing_result.repeat_count
+		for animation_frame_index in animation_params_parsing_result.frames_count:
+			var global_frame_index: int = animation_params_parsing_result.first_frame_index + animation_frame_index
+			var frame: _Common.FrameInfo = all_frames[global_frame_index]
+			if frame == null:
+				frame = _Common.FrameInfo.new()
+				frame.sprite = sprite_sheet.sprites[global_frame_index]
+				frame.duration = frames_duration
+				all_frames[global_frame_index] = frame
+			animation.frames.push_back(frame)
+		animation_library.animations.push_back(animation)
 
-	if not autoplay_animation_name.is_empty() and animation_library_model.autoplay_animation_index < 0:
+	if not autoplay_animation_name.is_empty() and animation_library.autoplay_animation_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
-	return _Models.ExportResultModel.success(sprite_sheet_model, animation_library_model)
+	result.success(sprite_sheet, animation_library)
+	return result
 
 class CustomImageFormatLoaderExtension:
 	extends ImageFormatLoaderExtension

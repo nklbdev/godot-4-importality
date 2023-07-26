@@ -10,12 +10,12 @@ var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.ne
 	"pencil2d_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
 	"", true, func(v: PackedStringArray): return false)
 
-const __ANIMATIONS_INFOS_OPTION: StringName = "importers/pencil2d/animations_infos"
+const __ANIMATIONS_PARAMETERS_OPTION: StringName = "importers/pencil2d/animations_parameters"
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["pclx"]
 	super("Pencil2D", recognized_extensions, [
-		_Options.create_option(__ANIMATIONS_INFOS_OPTION, PackedStringArray(),
+		_Options.create_option(__ANIMATIONS_PARAMETERS_OPTION, PackedStringArray(),
 		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 	], editor_file_system,
 	[ __os_command_project_setting, __os_command_arguments_project_setting ],
@@ -25,25 +25,31 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 		__os_command_arguments_project_setting,
 		_common_temporary_files_directory_path_project_setting))
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Models.ExportResultModel:
-	var err: Error
-	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
+func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+	var result: _Common.ExportResult = _Common.ExportResult.new()
 
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 	if os_command_result.error:
-		return _Models.ExportResultModel.fail(os_command_result.error, os_command_result.error_message)
+		result.fail(ERR_UNCONFIGURED, "Unable to get Pencil2D Command to export spritesheet", os_command_result)
+		return result
 
 	var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
 	if os_command_arguments_result.error:
-		return _Models.ExportResultModel.fail(os_command_arguments_result.error, os_command_arguments_result.error_message)
+		result.fail(ERR_UNCONFIGURED, "Unable to get Pencil2D Command Arguments to export spritesheet", os_command_arguments_result)
+		return result
 
 	var temp_dir_path_result: _ProjectSetting.Result = _common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
-		return _Models.ExportResultModel.fail(temp_dir_path_result.error, temp_dir_path_result.error_message)
+		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
+		return result
+
+	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
 
 	var zip_reader: ZIPReader = ZIPReader.new()
 	var zip_error: Error = zip_reader.open(global_source_file_path)
-	if zip_error: return _Models.ExportResultModel.fail(zip_error, "Unable to open Pencil2D file as ZIP archive")
+	if zip_error:
+		result.fail(zip_error, "Unable to open Pencil2D file \"%s\" as ZIP archive with error: %s (%s)" % [res_source_file_path, zip_error, error_string(zip_error)])
+		return result
 	var buffer: PackedByteArray = zip_reader.read_file("main.xml")
 	var main_xml_root: _XML.XMLNodeRoot = _XML.parse_buffer(buffer)
 	zip_reader.close()
@@ -53,27 +59,30 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 		.get_elements("fps").front() \
 		.get_int("value")
 
-	var raw_animations_infos: PackedStringArray = options[__ANIMATIONS_INFOS_OPTION]
-	var animations_infos: Array[_AnimationInfo]
-	animations_infos.resize(raw_animations_infos.size())
+	var raw_animations_params_list: PackedStringArray = options[__ANIMATIONS_PARAMETERS_OPTION]
+	var animations_params_parsing_results: Array[AnimationParamsParsingResult]
+	animations_params_parsing_results.resize(raw_animations_params_list.size())
 	var unique_animations_names: PackedStringArray
 	var frame_indices_to_export
 	var unique_frames_count: int = 0
-	var animation_first_frame: int = 0
-	for raw_animation_info_index in raw_animations_infos.size():
-		var raw_animation_info: String = raw_animations_infos[raw_animation_info_index]
-		var animation_info: _AnimationInfo = _parse_animation_info(
-			raw_animation_info,
-			AnimationOption.FramesCount | AnimationOption.Direction | AnimationOption.RepeatCount,
-			animation_first_frame)
-		if animation_info == null:
-			return _Models.ExportResultModel.fail(ERR_INVALID_DATA, "Invalid animation info format at element %s. Use \"name -f:frames_count [-d: direction] [-r: repeat_count]\" where direction can be: f(forward - default), r(reverse), pp(ping-pong), ppr(ping-pong reverse) and repeat_count is positive integer or 0 (default) for infinite loop" % raw_animation_info_index)
-		if unique_animations_names.has(animation_info.name):
-			return _Models.ExportResultModel.fail(ERR_INVALID_DATA, "Duplicated animation name at index: %s" % raw_animation_info_index)
-		unique_animations_names.push_back(animation_info.name)
-		unique_frames_count += animation_info.last_frame - animation_info.first_frame + 1
-		animation_first_frame = animation_info.last_frame + 1
-		animations_infos[raw_animation_info_index] = animation_info
+	var animation_first_frame_index: int = 0
+	for animation_index in raw_animations_params_list.size():
+		var raw_animation_params: String = raw_animations_params_list[animation_index]
+		var animation_params_parsing_result: AnimationParamsParsingResult = _parse_animation_params(
+			raw_animation_params,
+			AnimationOptions.FramesCount | AnimationOptions.Direction | AnimationOptions.RepeatCount,
+			animation_first_frame_index)
+		if animation_params_parsing_result.error:
+			result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters", animation_params_parsing_result)
+			return result
+		if unique_animations_names.has(animation_params_parsing_result.name):
+			result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %
+				[animation_params_parsing_result.name, animation_index])
+			return result
+		unique_animations_names.push_back(animation_params_parsing_result.name)
+		unique_frames_count += animation_params_parsing_result.frames_count
+		animation_first_frame_index += animation_params_parsing_result.frames_count
+		animations_params_parsing_results[animation_index] = animation_params_parsing_result
 
 	# -o --export <output_path> Render the file to <output_path>
 	# --camera <layer_name> Name of the camera layer to use
@@ -85,8 +94,10 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 	# input Path to input pencil file
 	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value)
 	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
-		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
-		if err: return _Models.ExportResultModel.fail(err, "An error occured while make temp directory: %s" % [temp_dir_path_result.value])
+		var make_dir_error: Error = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
+		if make_dir_error:
+			result.fail(ERR_FILE_CANT_WRITE, "An error occured while make temp directory \"%s\": %s \"%s\"" %
+				[temp_dir_path_result.value, make_dir_error, error_string(make_dir_error)])
 	var png_base_name: String = "img"
 	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
 	var command_line_params: PackedStringArray = PackedStringArray([
@@ -98,7 +109,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 	])
 
 	var output: Array
-	err = OS.execute(
+	var exit_code: int = OS.execute(
 		os_command_result.value,
 		os_command_arguments_result.value + PackedStringArray([
 			"--export", global_temp_png_path,
@@ -107,52 +118,56 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 			"--transparency",
 			global_source_file_path]),
 		output, true, false)
-	if err: return _Models.ExportResultModel.fail(err, "An error occurred while executing the Pencil2D command")
+	if exit_code:
+		result.fail(ERR_QUERY_FAILED, "An error occurred while executing the Pencil2D command. Process exited with code %s" % [exit_code])
+		return result
 
 	var frames_images: Array[Image]
 	for image_idx in unique_frames_count:
 		var global_frame_png_path: String = temp_dir_path_result.value \
 			.path_join("%s%04d.png" % [png_base_name, image_idx + 1])
 		frames_images.push_back(Image.load_from_file(global_frame_png_path))
-		err = DirAccess.remove_absolute(global_frame_png_path)
-		if err: push_error("Unable to remove temp file: \"%s\" with error: %s, continuing..." %
-			[global_frame_png_path, error_string(err)])
+		var remove_frame_file_error: Error = DirAccess.remove_absolute(global_frame_png_path)
+		if remove_frame_file_error: push_error("Unable to remove temp file: \"%s\" with error: %s %s, continuing..." %
+			[global_frame_png_path, remove_frame_file_error, error_string(remove_frame_file_error)])
 
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
 
 	var sprite_sheet_building_result: _SpriteSheetBuilderBase.Result = sprite_sheet_builder.build_sprite_sheet(frames_images)
 	if sprite_sheet_building_result.error:
-		return _Models.ExportResultModel.fail(sprite_sheet_building_result.error,
-			"Sprite sheet building failed: " + sprite_sheet_building_result.error_message)
-	var sprite_sheet_model: _Models.SpriteSheetModel = sprite_sheet_building_result.sprite_sheet
+		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
+		return result
+	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
 
-	var animation_library_model: _Models.AnimationLibraryModel = _Models.AnimationLibraryModel.new()
+	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
 
 	var frames_duration: float = 1.0 / animation_framerate
-	var all_frames: Array[_Models.FrameModel]
+	var all_frames: Array[_Common.FrameInfo]
 	all_frames.resize(unique_frames_count)
-	for animation_index in animations_infos.size():
-		var animation_info: _AnimationInfo = animations_infos[animation_index]
-		var animation_model = _Models.AnimationModel.new()
-		animation_model.name = animation_info.name
-		if animation_info.name == autoplay_animation_name:
-			animation_library_model.autoplay_animation_index = animation_index
-		animation_model.direction = animation_info.direction
-		animation_model.repeat_count = animation_info.repeat_count
-		for global_frame_index in range(animation_info.first_frame, animation_info.last_frame + 1):
-			var frame_model: _Models.FrameModel = all_frames[global_frame_index]
-			if frame_model == null:
-				frame_model = _Models.FrameModel.new()
-				frame_model.sprite = sprite_sheet_model.sprites[global_frame_index]
-				frame_model.duration = frames_duration
-				all_frames[global_frame_index] = frame_model
-			animation_model.frames.push_back(frame_model)
-		animation_library_model.animations.push_back(animation_model)
-	if not autoplay_animation_name.is_empty() and animation_library_model.autoplay_animation_index < 0:
+	for animation_index in animations_params_parsing_results.size():
+		var animation_params_parsing_result: AnimationParamsParsingResult = animations_params_parsing_results[animation_index]
+		var animation = _Common.AnimationInfo.new()
+		animation.name = animation_params_parsing_result.name
+		if animation.name == autoplay_animation_name:
+			animation_library.autoplay_animation_index = animation_index
+		animation.direction = animation_params_parsing_result.direction
+		animation.repeat_count = animation_params_parsing_result.repeat_count
+		for animation_frame_index in animation_params_parsing_result.frames_count:
+			var global_frame_index: int = animation_params_parsing_result.first_frame_index + animation_frame_index
+			var frame: _Common.FrameInfo = all_frames[global_frame_index]
+			if frame == null:
+				frame = _Common.FrameInfo.new()
+				frame.sprite = sprite_sheet.sprites[global_frame_index]
+				frame.duration = frames_duration
+				all_frames[global_frame_index] = frame
+			animation.frames.push_back(frame)
+		animation_library.animations.push_back(animation)
+	if not autoplay_animation_name.is_empty() and animation_library.autoplay_animation_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
-	return _Models.ExportResultModel.success(sprite_sheet_model, animation_library_model)
+	result.success(sprite_sheet, animation_library)
+	return result
 
 class CustomImageFormatLoaderExtension:
 	extends ImageFormatLoaderExtension

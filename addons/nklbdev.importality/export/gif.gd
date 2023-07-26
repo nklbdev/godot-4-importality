@@ -18,10 +18,12 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 	], editor_file_system, [
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Models.ExportResultModel:
-	var sprite_sheet_model: _Models.SpriteSheetModel = _Models.SpriteSheetModel.new()
-	var animation_library_model: _Models.AnimationLibraryModel = _Models.AnimationLibraryModel.new()
-	return _Models.ExportResultModel.success(sprite_sheet_model, animation_library_model)
+func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+	var result: _Common.ExportResult = _Common.ExportResult.new()
+	var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
+	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
+	result.success(sprite_sheet, animation_library)
+	return result
 
 class CustomImageFormatLoaderExtension:
 	extends ImageFormatLoaderExtension

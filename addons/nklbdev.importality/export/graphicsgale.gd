@@ -38,12 +38,14 @@ static func __print_chunk_(chunk: PackedByteArray, line_length: int) -> void:
 	for offset in range(0, chunk.size(), line_length):
 		print(chunk.slice(offset, offset + line_length).hex_encode())
 
-static func ex(res_source_file_path: String) -> _Models.ExportResultModel:
+static func ex(res_source_file_path: String) -> _Common.ExportResult:
+	var result = _Common.ExportResult.new()
 	var file = FileAccess.open(res_source_file_path, FileAccess.READ)
 	var file_length: int = file.get_length()
 	var prefix: PackedByteArray = file.get_buffer(8)
 	if prefix.get_string_from_utf8() != "GaleX200":
-		return _Models.ExportResultModel.fail(ERR_INVALID_DATA, "Invalid file format: header prefix")
+		result.fail(ERR_INVALID_DATA, "Invalid file format: header prefix")
+		return result
 #	var metadata: Dictionary = __parse_metadata(__get_chunk(file))
 
 	var chunk: PackedByteArray = __get_chunk(file)
@@ -152,7 +154,7 @@ static func ex(res_source_file_path: String) -> _Models.ExportResultModel:
 		frames_images[frame_index] = frame_image
 		frame_index += 1
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _GridBasedSpriteSheetBuilder.new(
-		_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.NONE,
+		_Common.EdgesArtifactsAvoidanceMethod.NONE,
 		_GridBasedSpriteSheetBuilder.StripDirection.HORIZONTAL,
 		2, # max cells in strip
 		false, #trim_sprites_to_overall_min_size: bool,
@@ -164,12 +166,14 @@ static func ex(res_source_file_path: String) -> _Models.ExportResultModel:
 		sprite_sheet_builder.build_sprite_sheet(frames_images)
 
 
-	var sprite_sheet_model: _Models.SpriteSheetModel = sprite_sheet_building_result.sprite_sheet
-	var animation_library_model: _Models.AnimationLibraryModel = _Models.AnimationLibraryModel.new()
-	return _Models.ExportResultModel.success(sprite_sheet_model, animation_library_model)
+	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
+	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
+	result.success(sprite_sheet, animation_library)
+	return result
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Models.ExportResultModel:
-	var sprite_sheet_model: _Models.SpriteSheetModel = _Models.SpriteSheetModel.new()
+func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+	var result: _Common.ExportResult = _Common.ExportResult.new()
+	var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
 
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(res_source_file_path)
 	var offset: int = 8
@@ -182,8 +186,9 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Models.Expor
 	var d: String = root.dump_to_string()
 #	print(d)
 
-	var animation_library_model: _Models.AnimationLibraryModel = _Models.AnimationLibraryModel.new()
-	return _Models.ExportResultModel.success(sprite_sheet_model, animation_library_model)
+	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
+	result.success(sprite_sheet, animation_library)
+	return result
 
 static func __get_chunk(file: FileAccess) -> PackedByteArray:
 	var buffer_size: int = file.get_32()

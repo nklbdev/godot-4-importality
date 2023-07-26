@@ -1,6 +1,5 @@
-extends Object
-
 class XMLNode:
+	extends RefCounted
 	var text: String
 	func _init(text: String) -> void:
 		self.text = text

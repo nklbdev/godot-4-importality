@@ -10,14 +10,15 @@ func _init() -> void:
 
 func import(
 	res_source_file_path: String,
-	export_result: _Models.ExportResultModel,
+	export_result: _Common.ExportResult,
 	options: Dictionary,
 	save_path: String
-	) -> _Models.ImportResultModel:
+	) -> _Common.ImportResult:
+	var result: _Common.ImportResult = _Common.ImportResult.new()
 
-	var sprite_frames_import_result: _Models.ImportResultModel = __sprite_frames_importer \
+	var sprite_frames_import_result: _Common.ImportResult = __sprite_frames_importer \
 		.import(res_source_file_path, export_result, options, save_path)
-	if sprite_frames_import_result.status:
+	if sprite_frames_import_result.error:
 		return sprite_frames_import_result
 	var sprite_frames: SpriteFrames = sprite_frames_import_result.resource
 
@@ -29,11 +30,13 @@ func import(
 
 	if export_result.animation_library.autoplay_animation_index >= 0:
 		if export_result.animation_library.autoplay_animation_index >= export_result.animation_library.animations.size():
-			return _Models.ImportResultModel.fail(ERR_INVALID_DATA, "Autoplay animation index overflow")
+			result.fail(ERR_INVALID_DATA, "Autoplay animation index overflow")
+			return result
 		animated_sprite.autoplay = export_result.animation_library \
 			.animations[export_result.animation_library.autoplay_animation_index].name
 
 	var packed_scene: PackedScene = PackedScene.new()
 	packed_scene.pack(animated_sprite)
-	return _Models.ImportResultModel.success(packed_scene,
+	result.success(packed_scene,
 		ResourceSaver.FLAG_COMPRESS | ResourceSaver.FLAG_BUNDLE_RESOURCES)
+	return result

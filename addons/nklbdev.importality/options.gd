@@ -1,11 +1,11 @@
-extends Object
-
-const _Models = preload("models.gd")
+const _Common = preload("common.gd")
 const __empty_callable: Callable = Callable()
 
 const SPRITE_SHEET_LAYOUT: StringName = "sprite_sheet/layout"
 const MAX_CELLS_IN_STRIP: StringName = "sprite_sheet/max_cells_in_strip"
 const ATLAS_RESOURCE_TYPE: StringName = "sprite_sheet/atlas_resource_type"
+const ATLAS_COMPRESSION_MODE_FOR_PORTABLE_COMPRESSED_TEXTURE_2D: StringName = "sprite_sheet/atlas_compression_mode_for_portable_compressed_texture_2d"
+const ATLAS_IMAGE_COMPRESS_MODE_FOR_IMAGE_TEXTURE: StringName = "sprite_sheet/atlas_image_compress_mode_for_image_texture"
 const EDGES_ARTIFACTS_AVOIDANCE_METHOD: StringName = "sprite_sheet/edges_artifacts_avoidance_method"
 const SPRITES_SURROUNDING_COLOR: StringName = "sprite_sheet/sprites_surrounding_color"
 const TRIM_SPRITES_TO_OVERALL_MIN_SIZE: StringName = "sprite_sheet/trim_sprites_to_overall_min_size"
@@ -38,9 +38,3 @@ static func create_option(
 	if get_is_visible != __empty_callable:
 		option_data["get_is_visible"] = get_is_visible
 	return option_data
-
-func is_layout_packed(options: Dictionary) -> bool:
-	return options[SPRITE_SHEET_LAYOUT] == _Models.SpriteSheetModel.Layout.PACKED
-
-func is_layout_grid_based(options: Dictionary) -> bool:
-	return options[SPRITE_SHEET_LAYOUT] != _Models.SpriteSheetModel.Layout.PACKED

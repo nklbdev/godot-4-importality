@@ -1,8 +1,8 @@
 extends "_node_with_animation_player.gd"
 
 const ANIMATION_STRATEGIES_NAMES: PackedStringArray = [
-	"Animate sprite's region and optionally offset",
-	"Animate single atlas texture's region and optionally margin",
+	"Animate sprite's region and offset",
+	"Animate single atlas texture's region and margin",
 	"Animate multiple atlas textures instances",
 ]
 enum AnimationStrategy {
@@ -10,11 +10,6 @@ enum AnimationStrategy {
 	SINGLE_ATLAS_TEXTURE_REGION_AND_MARGIN = 1,
 	MULTIPLE_ATLAS_TEXTURES_INSTANCES = 2,
 }
-
-func _is_layout_packed(options: Dictionary) -> bool:
-	return options[_Options.SPRITE_SHEET_LAYOUT] == _Models.SpriteSheetModel.Layout.PACKED
-func _is_layout_grid_based(options: Dictionary) -> bool:
-	return options[_Options.SPRITE_SHEET_LAYOUT] != _Models.SpriteSheetModel.Layout.PACKED
 
 func _init(
 	name: String,
