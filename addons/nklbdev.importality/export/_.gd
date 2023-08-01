@@ -20,32 +20,6 @@ enum AtlasResourceType {
 	SEPARATED_IMAGE = 2,
 }
 
-const ATLAS_COMPRESSION_MODE_FOR_PORTABLE_COMPRESSED_TEXTURE_2D_NAMES: PackedStringArray = [
-	"Lossless",
-	"Lossy",
-	"Basis Universal",
-]
-enum AtlasCompressionModeForPortableCompressedTexture2D {
-	LOSSLESS = 0, # (for example - 3kb) lossless
-	LOSSY = 1, # (for example - 4kb) blurry edges, dirty fills
-	BASIS_UNIVERSAL = 2, # (for example - 19kb) like lossless but lossy and prints messages:
-	# Total basis file slices: 1
-	# Slice: 0, alpha: 1, orig width/height: 264x66, width/height: 264x68, first_block: 0, image_index: 0, mip_level: 0, iframe: 0
-	# Basis universal cannot unpack level 1.
-	# Basis universal cannot unpack level 1.
-}
-
-const ATLAS_IMAGE_COMPRESS_MODE_FOR_IMAGE_TEXTURE_NAMES: PackedStringArray = [
-	"None (lossless but large)",
-	"BP (DirectX 11's BP7 - high quality)",
-	"S3 (DirectX TC - low quality)",
-]
-enum AtlasImageCompressModeForImageTexture {
-	NONE = 0, # (for example - 69kb)
-	BP = 1, # (for example - 19kb)
-	S3 = 2, # (for example - 19kb) blurry edges, dirty fills and growing texture by 1 pixel up and down
-}
-
 var _common_temporary_files_directory_path_project_setting: _ProjectSetting = _ProjectSetting.new(
 	"temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
 	"", true, func(v: String): return v.is_empty())
@@ -55,19 +29,6 @@ var __recognized_extensions: PackedStringArray
 var __project_settings: Array[_ProjectSetting] = [_common_temporary_files_directory_path_project_setting]
 var __editor_file_system: EditorFileSystem
 var __options: Array[Dictionary] = [
-	_Options.create_option(_Options.ATLAS_RESOURCE_TYPE, AtlasResourceType.EMBEDDED_PORTABLE_COMPRESSED_TEXTURE_2D,
-		PROPERTY_HINT_ENUM, ",".join(ATLAS_TEXTURE_RESOURCE_TYPE_NAMES),
-		PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED),
-	_Options.create_option(_Options.ATLAS_COMPRESSION_MODE_FOR_PORTABLE_COMPRESSED_TEXTURE_2D,
-		AtlasCompressionModeForPortableCompressedTexture2D.LOSSLESS,
-		PROPERTY_HINT_ENUM, ",".join(ATLAS_COMPRESSION_MODE_FOR_PORTABLE_COMPRESSED_TEXTURE_2D_NAMES), PROPERTY_USAGE_DEFAULT,
-		func(o): return o[_Options.ATLAS_RESOURCE_TYPE] == \
-			AtlasResourceType.EMBEDDED_PORTABLE_COMPRESSED_TEXTURE_2D),
-	_Options.create_option(_Options.ATLAS_IMAGE_COMPRESS_MODE_FOR_IMAGE_TEXTURE,
-		AtlasImageCompressModeForImageTexture.NONE,
-		PROPERTY_HINT_ENUM, ",".join(ATLAS_IMAGE_COMPRESS_MODE_FOR_IMAGE_TEXTURE_NAMES), PROPERTY_USAGE_DEFAULT,
-		func(o): return o[_Options.ATLAS_RESOURCE_TYPE] == \
-			AtlasResourceType.EMBEDDED_IMAGE_TEXTURE),
 	_Options.create_option(_Options.SPRITE_SHEET_LAYOUT, _Common.SpriteSheetLayout.PACKED,
 		PROPERTY_HINT_ENUM, ",".join(_Common.SPRITE_SHEET_LAYOUTS_NAMES),
 		PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED),
@@ -121,69 +82,50 @@ func get_project_settings() -> Array[_ProjectSetting]:
 func get_image_format_loader_extension() -> ImageFormatLoaderExtension:
 	return __image_format_loader_extension
 
-const _PortableCompressedTexture2DCompressionMap: Dictionary = {
-	AtlasCompressionModeForPortableCompressedTexture2D.LOSSLESS:
-		PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS,
-	AtlasCompressionModeForPortableCompressedTexture2D.LOSSY:
-		PortableCompressedTexture2D.COMPRESSION_MODE_LOSSY,
-	AtlasCompressionModeForPortableCompressedTexture2D.BASIS_UNIVERSAL:
-		PortableCompressedTexture2D.COMPRESSION_MODE_BASIS_UNIVERSAL,
-}
-
-const _AtlasImageCompressModeForImageTextureMap: Dictionary = {
-	# AtlasImageCompressModeForImageTexture.NONE: not exists
-	AtlasImageCompressModeForImageTexture.BP: Image.COMPRESS_BPTC,
-	AtlasImageCompressModeForImageTexture.S3: Image.COMPRESS_S3TC,
-}
+class AtlasMaker:
+	extends RefCounted
+	class Result:
+		extends _Common.Result
+		var atlas: Texture2D
+		func success(atlas: Texture2D) -> void:
+			super._success()
+			self.atlas = atlas
+	var __editor_import_plugin: EditorImportPlugin
+	var __editor_file_system: EditorFileSystem
+	var __png_path: String
+	func _init(
+		editor_import_plugin: EditorImportPlugin,
+		editor_file_system: EditorFileSystem,
+		res_source_file_path: String
+		) -> void:
+		__editor_import_plugin = editor_import_plugin
+		__editor_file_system = editor_file_system
+		__png_path = res_source_file_path + ".png"
+	func make_atlas(atlas_image: Image) -> Result:
+		var result: Result = Result.new()
+		atlas_image.save_png(__png_path)
+		__editor_file_system.update_file(__png_path)
+		var error: Error = __editor_import_plugin.append_import_external_resource(__png_path)
+		if error:
+			result.fail(error, "An error occured while appending import external resource (atlas texture)")
+		else:
+			result.success(ResourceLoader.load(__png_path, "Texture2D", ResourceLoader.CACHE_MODE_IGNORE))
+		return result
 
 func export(
 	res_source_file_path: String,
 	options: Dictionary,
 	editor_import_plugin: EditorImportPlugin
 	) -> _Common.ExportResult:
+	return _export(
+		res_source_file_path,
+		AtlasMaker.new(
+			editor_import_plugin,
+			__editor_file_system,
+			res_source_file_path),
+		options)
 
-	var export_result: _Common.ExportResult = _export(res_source_file_path, options)
-	if export_result.error:
-		return export_result
-	var atlas_resource_type: AtlasResourceType = options[_Options.ATLAS_RESOURCE_TYPE]
-	match atlas_resource_type:
-		AtlasResourceType.EMBEDDED_PORTABLE_COMPRESSED_TEXTURE_2D:
-			var atlas: PortableCompressedTexture2D = PortableCompressedTexture2D.new()
-			atlas.keep_compressed_buffer = true
-			atlas.create_from_image(
-				export_result.sprite_sheet.atlas_image,
-				_PortableCompressedTexture2DCompressionMap[
-					options[_Options.ATLAS_COMPRESSION_MODE_FOR_PORTABLE_COMPRESSED_TEXTURE_2D]])
-			export_result.sprite_sheet.atlas = atlas
-		AtlasResourceType.EMBEDDED_IMAGE_TEXTURE:
-			var image_compress_mode: AtlasImageCompressModeForImageTexture = \
-				options[_Options.ATLAS_IMAGE_COMPRESS_MODE_FOR_IMAGE_TEXTURE]
-			if image_compress_mode > 0:
-				export_result.sprite_sheet.atlas_image.compress(
-					_AtlasImageCompressModeForImageTextureMap[image_compress_mode])
-			match options[_Options.ATLAS_IMAGE_COMPRESS_MODE_FOR_IMAGE_TEXTURE]:
-				AtlasImageCompressModeForImageTexture.NONE:
-					pass
-				AtlasImageCompressModeForImageTexture.BP:
-					export_result.sprite_sheet.atlas_image.compress(Image.COMPRESS_BPTC)
-				AtlasImageCompressModeForImageTexture.S3:
-					export_result.sprite_sheet.atlas_image.compress(Image.COMPRESS_S3TC)
-			export_result.sprite_sheet.atlas = \
-				ImageTexture.create_from_image(export_result.sprite_sheet.atlas_image)
-		AtlasResourceType.SEPARATED_IMAGE:
-			var png_path = res_source_file_path + ".png"
-			export_result.sprite_sheet.atlas_image.save_png(png_path)
-			__editor_file_system.update_file(png_path)
-			var error: Error = editor_import_plugin.append_import_external_resource(png_path)
-			if error:
-				export_result.fail(error, "An error occured while appending import external resource (atlas texture)")
-				return export_result
-			export_result.sprite_sheet.atlas = \
-				ResourceLoader.load(png_path, "Texture2D", ResourceLoader.CACHE_MODE_IGNORE)
-		_: export_result.fail(ERR_INVALID_DATA, "Unexpected atlas resource type: %s" % [atlas_resource_type])
-	return export_result
-
-func _export(source_file: String, options: Dictionary) -> _Common.ExportResult:
+func _export(source_file: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	assert(false, "This method is abstract and must be overriden.")
 	var result: _Common.ExportResult = _Common.ExportResult.new()
 	result.fail(ERR_UNCONFIGURED)

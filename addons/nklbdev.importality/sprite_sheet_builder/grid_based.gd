@@ -1,3 +1,4 @@
+@tool
 extends "_.gd"
 
 const _RectPacker = preload("../rect_packer.gd")
@@ -36,7 +37,9 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 	var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
 
 	if images_count == 0:
-		result.success(sprite_sheet)
+		var atlas_image = Image.new()
+		atlas_image.set_data(1, 1, false, Image.FORMAT_RGBA8, PackedByteArray([0, 0, 0, 0]))
+		result.success(sprite_sheet, atlas_image)
 		return result
 
 	sprite_sheet.source_image_size = images.front().get_size()
@@ -127,11 +130,10 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 		_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
 			pass
 
-	var atlas = Image.create(atlas_size.x, atlas_size.y, false, Image.FORMAT_RGBA8)
-	sprite_sheet.atlas_image = atlas
+	var atlas_image = Image.create(atlas_size.x, atlas_size.y, false, Image.FORMAT_RGBA8)
 
 	if _edges_artifacts_avoidance_method == _Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
-		atlas.fill(_sprites_surrounding_color)
+		atlas_image.fill(_sprites_surrounding_color)
 
 	var cell: Vector2i
 	var cell_index: int
@@ -145,8 +147,6 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 		var image: Image = images[sprite_index]
 		cell[first_axis] = cell_index % _max_cells_in_strip if _max_cells_in_strip > 0 else cell_index
 		cell[second_axis] = cell_index / _max_cells_in_strip if _max_cells_in_strip > 0 else 0
-		sprite_sheet.strips_count = max(sprite_sheet.strips_count, cell[first_axis])
-		sprite_sheet.cells_in_strip_count = max(sprite_sheet.cells_in_strip_count, cell[second_axis])
 		sprite.region.position = cell * image_region.size
 		match _edges_artifacts_avoidance_method:
 			_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_SPACING:
@@ -157,15 +157,15 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 				sprite.region.position += cell * 2 + Vector2i.ONE
 			_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
 				pass
-		atlas.blit_rect(image, image_region, sprite.region.position)# +
+		atlas_image.blit_rect(image, image_region, sprite.region.position)# +
 			#(Vector2i.ONE
 			#if _edges_artifacts_avoidance_method == \
 			#	_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION else
 			#Vector2i.ZERO))
 		match _edges_artifacts_avoidance_method:
 			_Common.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
-				_extrude_borders(atlas, sprite.region)
+				_extrude_borders(atlas_image, sprite.region)
 		cell_index += 1
 
-	result.success(sprite_sheet)
+	result.success(sprite_sheet, atlas_image)
 	return result

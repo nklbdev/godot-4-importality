@@ -1,8 +1,12 @@
+@tool
+# @tool надо писать, чтобы не только можно было инстанциировать этот скрипт,
+# а еще чтобы инициализировалась статика в нем!
+# И не важно, что в родительском классе эта директива уже есть!
 extends "_.gd"
 
-const __sheet_types_by_sprite_sheet_layout: PackedStringArray = \
+const __aseprite_sheet_types_by_sprite_sheet_layout: PackedStringArray = \
 	[ "rows", "columns", "packed" ]
-const __aseprite_output_animation_directions: PackedStringArray = \
+const __aseprite_animation_directions: PackedStringArray = \
 	[ "forward", "reverse", "pingpong", "pingpong_reverse" ]
 
 var __os_command_project_setting: _ProjectSetting = _ProjectSetting.new(
@@ -20,7 +24,7 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 		CustomImageFormatLoaderExtension.new(recognized_extensions,
 		__os_command_project_setting, __os_command_arguments_project_setting))
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
 
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
@@ -75,7 +79,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 			"--list-tags",
 			"--trim" if sprite_sheet_layout == _Common.SpriteSheetLayout.PACKED else
 				"--trim-sprite" if options[_Options.TRIM_SPRITES_TO_OVERALL_MIN_SIZE] else "",
-			"--sheet-type", __sheet_types_by_sprite_sheet_layout[sprite_sheet_layout],
+			"--sheet-type", __aseprite_sheet_types_by_sprite_sheet_layout[sprite_sheet_layout],
 			] + variable_options + [
 			"--sheet", global_png_path,
 			ProjectSettings.globalize_path(res_source_file_path)]),
@@ -89,10 +93,15 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 	var source_size_data = json.data.frames[0].sourceSize
 	sprite_sheet.source_image_size = Vector2i(source_size_data.w, source_size_data.h)
 
-	sprite_sheet.atlas_image = Image.load_from_file(global_png_path)
+	var atlas_making_result: AtlasMaker.Result = atlas_maker \
+		.make_atlas(Image.load_from_file(global_png_path))
 	DirAccess.remove_absolute(global_png_path)
+	if atlas_making_result.error:
+		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
+		return result
+	sprite_sheet.atlas = atlas_making_result.atlas
 
-	result.animation_library = _Common.AnimationLibraryInfo.new()
+	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges().strip_escapes()
 	var sprites_by_rect_positions: Dictionary
 	var frames: Array[_Common.FrameInfo]
@@ -137,17 +146,18 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 				return result
 			unique_names.append(animation.name)
 
-			animation.direction = __aseprite_output_animation_directions.find(tag_data.direction)
+			animation.direction = __aseprite_animation_directions.find(tag_data.direction)
 			animation.repeat_count = int(tag_data.get("repeat", "0"))
 			animation.frames = frames.slice(tag_data.from, tag_data.to + 1)
 			if autoplay_animation_name and autoplay_animation_name == animation.name:
-				result.animation_library.autoplay_animation_index = result.animation_library.animations.size() - 1
-			result.animation_library.animations.append(animation)
+				animation_library.autoplay_index = animation_library.animations.size() - 1
+			animation_library.animations.append(animation)
 
-		if autoplay_animation_name and result.animation_library.autoplay_animation_index < 0:
+		if autoplay_animation_name and animation_library.autoplay_index < 0:
 			result.fail(ERR_INVALID_DATA, "Autoplay animation not found by name: %s" % autoplay_animation_name)
 			return result
 
+	result.success(sprite_sheet, animation_library)
 	return result
 
 class CustomImageFormatLoaderExtension:
@@ -160,7 +170,8 @@ class CustomImageFormatLoaderExtension:
 
 	func _init(recognized_extensions: PackedStringArray,
 		os_command_project_setting: _ProjectSetting,
-		os_command_arguments_project_setting: _ProjectSetting) -> void:
+		os_command_arguments_project_setting: _ProjectSetting
+		) -> void:
 		__recognized_extensions = recognized_extensions
 		__os_command_project_setting = os_command_project_setting
 		__os_command_arguments_project_setting = os_command_arguments_project_setting

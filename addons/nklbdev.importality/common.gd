@@ -1,3 +1,5 @@
+@tool
+
 const SPRITE_SHEET_LAYOUTS_NAMES: PackedStringArray = [
 	"Packed",
 	"Horizontal strips",
@@ -44,11 +46,8 @@ class SpriteInfo:
 
 class SpriteSheetInfo:
 	extends RefCounted
-	var atlas_image: Image
 	var atlas: Texture2D
 	var source_image_size: Vector2i
-	var strips_count: int
-	var cells_in_strip_count: int
 	var sprites: Array[SpriteInfo]
 
 class FrameInfo:
@@ -62,7 +61,7 @@ class AnimationInfo:
 	var direction: AnimationDirection
 	var repeat_count: int
 	var frames: Array[FrameInfo]
-	func get_output_frames() -> Array[FrameInfo]:
+	func get_flatten_frames() -> Array[FrameInfo]:
 		var iteration_frames: Array[FrameInfo] = frames.duplicate()
 		if direction == AnimationDirection.REVERSE or direction == AnimationDirection.PING_PONG_REVERSE:
 			iteration_frames.reverse()
@@ -85,7 +84,7 @@ class AnimationInfo:
 class AnimationLibraryInfo:
 	extends RefCounted
 	var animations: Array[AnimationInfo]
-	var autoplay_animation_index: int = -1
+	var autoplay_index: int = -1
 
 class Result:
 	extends RefCounted
@@ -93,7 +92,7 @@ class Result:
 	var error_description: String
 	var inner_result: Result
 	func _get_result_type_description() -> String:
-		return "Abstract operation"
+		return "Operation"
 	func fail(error: Error, error_description: String = "", inner_result: Result = null) -> void:
 		assert(error != OK)
 		self.error = error

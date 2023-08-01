@@ -1,10 +1,10 @@
+@tool
 extends RefCounted
 
 const _Common = preload("../common.gd")
 const _Options = preload("../options.gd")
 
-var __options: Array[Dictionary] = [#__OPTIONS.duplicate()
-#static var __OPTIONS: Array[Dictionary] = [
+var __options: Array[Dictionary] = [
 	_Options.create_option(_Options.DEFAULT_ANIMATION_NAME, "default",
 	PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 	_Options.create_option(_Options.DEFAULT_ANIMATION_DIRECTION, _Common.AnimationDirection.FORWARD,
@@ -44,7 +44,8 @@ func get_options() -> Array[Dictionary]:
 
 func import(
 	source_file_path: String,
-	export_result: _Common.ExportResult,
+	sprite_sheet: _Common.SpriteSheetInfo,
+	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
 	save_path: String) -> _Common.ImportResult:
 	assert(false, "This method is abstract and must be overriden.")

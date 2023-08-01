@@ -1,3 +1,4 @@
+@tool
 extends "_.gd"
 
 enum PxoLayerType {
@@ -13,7 +14,7 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 		# settings
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
 
 	var file: FileAccess = FileAccess.open_compressed(res_source_file_path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
@@ -65,7 +66,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 		unique_animations_names.push_back(animation_params_parsing_result.name)
 		animation.name = animation_params_parsing_result.name
 		if animation.name == autoplay_animation_name:
-			animation_library.autoplay_animation_index = animation_index
+			animation_library.autoplay_index = animation_index
 		animation.direction = animation_params_parsing_result.direction
 		animation.repeat_count = animation_params_parsing_result.repeat_count
 
@@ -112,7 +113,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 						frame_image.blend_rect(pxo_cel_image, image_rect, Vector2i.ZERO)
 				unique_frames_indices_by_frame_index[frame_index] = unique_frame_index
 			animation.frames[animation_frame_index] = frame
-	if not autoplay_animation_name.is_empty() and animation_library.autoplay_animation_index < 0:
+	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
@@ -123,6 +124,12 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
+	var atlas_making_result: AtlasMaker.Result = atlas_maker \
+		.make_atlas(sprite_sheet_building_result.atlas_image)
+	if atlas_making_result.error:
+		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
+		return result
+	sprite_sheet.atlas = atlas_making_result.atlas
 
 	for unique_frame_index in unique_frames_count:
 		var unique_frame: _Common.FrameInfo = unique_frames[unique_frame_index]

@@ -1,3 +1,4 @@
+@tool
 extends RefCounted
 
 const _Common = preload("../common.gd")
@@ -15,11 +16,13 @@ func _init(
 class Result:
 	extends _Common.Result
 	var sprite_sheet: _Common.SpriteSheetInfo
+	var atlas_image: Image
 	func _get_result_type_description() -> String:
 		return "Sprite sheet building"
-	func success(sprite_sheet: _Common.SpriteSheetInfo) -> void:
+	func success(sprite_sheet: _Common.SpriteSheetInfo, atlas_image: Image) -> void:
 		_success()
 		self.sprite_sheet = sprite_sheet
+		self.atlas_image = atlas_image
 
 func build_sprite_sheet(images: Array[Image]) -> Result:
 	assert(false, "This method is abstract and must be overriden.")

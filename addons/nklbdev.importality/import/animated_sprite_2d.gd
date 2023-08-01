@@ -1,3 +1,4 @@
+@tool
 extends "_node.gd"
 
 const _SpriteFramesImporter = preload("sprite_frames.gd")
@@ -10,14 +11,15 @@ func _init() -> void:
 
 func import(
 	res_source_file_path: String,
-	export_result: _Common.ExportResult,
+	sprite_sheet: _Common.SpriteSheetInfo,
+	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
 	save_path: String
 	) -> _Common.ImportResult:
 	var result: _Common.ImportResult = _Common.ImportResult.new()
 
 	var sprite_frames_import_result: _Common.ImportResult = __sprite_frames_importer \
-		.import(res_source_file_path, export_result, options, save_path)
+		.import(res_source_file_path, sprite_sheet,	animation_library, options, save_path)
 	if sprite_frames_import_result.error:
 		return sprite_frames_import_result
 	var sprite_frames: SpriteFrames = sprite_frames_import_result.resource
@@ -28,12 +30,12 @@ func import(
 		if node_name.is_empty() else node_name
 	animated_sprite.sprite_frames = sprite_frames
 
-	if export_result.animation_library.autoplay_animation_index >= 0:
-		if export_result.animation_library.autoplay_animation_index >= export_result.animation_library.animations.size():
+	if animation_library.autoplay_index >= 0:
+		if animation_library.autoplay_index >= animation_library.animations.size():
 			result.fail(ERR_INVALID_DATA, "Autoplay animation index overflow")
 			return result
-		animated_sprite.autoplay = export_result.animation_library \
-			.animations[export_result.animation_library.autoplay_animation_index].name
+		animated_sprite.autoplay = animation_library \
+			.animations[animation_library.autoplay_index].name
 
 	var packed_scene: PackedScene = PackedScene.new()
 	packed_scene.pack(animated_sprite)

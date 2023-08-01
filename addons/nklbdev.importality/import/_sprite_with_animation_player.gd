@@ -1,3 +1,4 @@
+@tool
 extends "_node_with_animation_player.gd"
 
 const ANIMATION_STRATEGIES_NAMES: PackedStringArray = [

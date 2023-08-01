@@ -1,3 +1,4 @@
+@tool
 extends "_node.gd"
 
 class TrackFrame:
@@ -18,7 +19,7 @@ static func _create_animation_player(
 
 	for animation_info in animation_library_info.animations:
 		var animation: Animation = Animation.new()
-		var frames: Array[_Common.FrameInfo] = animation_info.get_output_frames()
+		var frames: Array[_Common.FrameInfo] = animation_info.get_flatten_frames()
 		for property_path in track_value_getters_by_property_path.keys():
 			__create_track(animation, property_path,
 				frames, track_value_getters_by_property_path[property_path])
@@ -31,9 +32,9 @@ static func _create_animation_player(
 		animation_library.add_animation(animation_info.name, animation)
 	animation_player.add_animation_library("", animation_library)
 
-	if animation_library_info.autoplay_animation_index >= 0:
+	if animation_library_info.autoplay_index >= 0:
 		animation_player.autoplay = animation_library_info \
-			.animations[animation_library_info.autoplay_animation_index].name
+			.animations[animation_library_info.autoplay_index].name
 
 	return animation_player
 

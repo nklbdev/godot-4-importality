@@ -1,3 +1,4 @@
+@tool
 # This code is taken from: https://github.com/semibran/pack/blob/master/lib/pack.js
 # Copyright (c) 2018 Brandon Semilla (MIT License) - original author
 # Copyright (c) 2023 Nikolay Lebedev (MIT License) - porting to gdscript, refactoring and optimization

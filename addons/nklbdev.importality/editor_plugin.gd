@@ -4,8 +4,6 @@ extends EditorPlugin
 const ExporterBase = preload("export/_.gd")
 const EXPORTERS_SCRIPTS: Array[GDScript] = [
 	preload("export/aseprite.gd"),
-	preload("export/gif.gd"),
-	preload("export/graphicsgale.gd"),
 	preload("export/krita.gd"),
 	preload("export/pencil2d.gd"),
 	preload("export/piskel.gd"),
@@ -20,7 +18,7 @@ const IMPORTERS_SCRIPTS: Array[GDScript] = [
 	preload("import/sprite_3d_with_animation_player.gd"),
 	preload("import/sprite_frames.gd"),
 	preload("import/texture_rect_with_animation_player.gd"),
-	# TODO: preload("import/sprite_sheet.gd"),
+	preload("import/sprite_sheet.gd"),
 ]
 
 const CombinedEditorImportPlugin = preload("combined_editor_import_plugin.gd")

@@ -1,3 +1,4 @@
+@tool
 extends "_.gd"
 
 const _XML = preload("../xml.gd")
@@ -25,7 +26,7 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 		__os_command_arguments_project_setting,
 		_common_temporary_files_directory_path_project_setting))
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
 
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
@@ -100,13 +101,6 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 				[temp_dir_path_result.value, make_dir_error, error_string(make_dir_error)])
 	var png_base_name: String = "img"
 	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
-	var command_line_params: PackedStringArray = PackedStringArray([
-		"--export", global_temp_png_path,
-		"--start", 1,
-		"--end", unique_frames_count,
-		"--transparency",
-		global_source_file_path,
-	])
 
 	var output: Array
 	var exit_code: int = OS.execute(
@@ -138,6 +132,12 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
+	var atlas_making_result: AtlasMaker.Result = atlas_maker \
+		.make_atlas(sprite_sheet_building_result.atlas_image)
+	if atlas_making_result.error:
+		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
+		return result
+	sprite_sheet.atlas = atlas_making_result.atlas
 
 	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
@@ -150,7 +150,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 		var animation = _Common.AnimationInfo.new()
 		animation.name = animation_params_parsing_result.name
 		if animation.name == autoplay_animation_name:
-			animation_library.autoplay_animation_index = animation_index
+			animation_library.autoplay_index = animation_index
 		animation.direction = animation_params_parsing_result.direction
 		animation.repeat_count = animation_params_parsing_result.repeat_count
 		for animation_frame_index in animation_params_parsing_result.frames_count:
@@ -163,7 +163,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 				all_frames[global_frame_index] = frame
 			animation.frames.push_back(frame)
 		animation_library.animations.push_back(animation)
-	if not autoplay_animation_name.is_empty() and animation_library.autoplay_animation_index < 0:
+	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
 	result.success(sprite_sheet, animation_library)

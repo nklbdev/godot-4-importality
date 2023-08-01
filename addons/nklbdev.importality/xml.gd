@@ -1,3 +1,5 @@
+@tool
+
 class XMLNode:
 	extends RefCounted
 	var text: String

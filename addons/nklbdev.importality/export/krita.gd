@@ -1,3 +1,4 @@
+@tool
 extends "_.gd"
 
 const _XML = preload("../xml.gd")
@@ -17,11 +18,22 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 		__os_command_arguments_project_setting,
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
-func __validate_image_name(image_name: String) -> bool:
-	push_error("not implemented!!!")
-	return true
+func __validate_image_name(image_name: String) -> _Common.Result:
+	var result: _Common.Result = _Common.Result.new()
+	var image_name_with_underscored_invalid_characters: String = image_name.validate_filename()
+	var unsupported_characters: PackedStringArray
+	for character_index in image_name.length():
+		var validated_character = image_name_with_underscored_invalid_characters[character_index]
+		if validated_character == "_":
+			var original_character = image_name[character_index]
+			if original_character != "_":
+				if not unsupported_characters.has(original_character):
+					unsupported_characters.push_back(original_character)
+	if not unsupported_characters.is_empty():
+		result.fail(ERR_FILE_BAD_PATH, "There are unsupported characters in Krita Document Title: \"%s\"" % ["".join(unsupported_characters)])
+	return result
 
-func _export(res_source_file_path: String, options: Dictionary) -> _Common.ExportResult:
+func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
 
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
@@ -57,8 +69,11 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 	var image_xml_element: _XML.XMLNodeElement = maindoc_doc_xml_element.get_elements("IMAGE").front()
 	var image_name: String = image_xml_element.get_string("name")
 	var image_size: Vector2i = image_xml_element.get_vector2i("width", "height")
-	if not __validate_image_name(image_name):
-		result.fail(ERR_INVALID_DATA, "Image name have unsupported format")
+	var image_name_validation_result: _Common.Result = __validate_image_name(image_name)
+	if image_name_validation_result.error:
+		result.fail(ERR_INVALID_DATA,
+			"Krita Document Title have unsupported format",
+			image_name_validation_result)
 		return result
 
 	var has_keyframes: bool
@@ -67,23 +82,8 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 			has_keyframes = true
 			break
 	if not has_keyframes:
-		var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
-		sprite_sheet.atlas_image = Image.create(1, 1, false, Image.FORMAT_RGBA8)
-		sprite_sheet.source_image_size = image_size
-		sprite_sheet.strips_count = 0
-		sprite_sheet.cells_in_strip_count = 0
-
-		var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
-		var default_animation: _Common.AnimationInfo = _Common.AnimationInfo.new()
-		default_animation.name = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
-		if not default_animation.name:
-			default_animation.name = "default"
-		default_animation.direction = options[_Options.DEFAULT_ANIMATION_DIRECTION]
-		default_animation.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
-		animation_library.animations.push_back(default_animation)
-		result.success(sprite_sheet, animation_library)
+		result.fail(ERR_INVALID_DATA, "Source file has no keyframes")
 		return result
-
 
 	var animation_xml_element: _XML.XMLNodeElement = image_xml_element.get_elements("animation").front()
 	var animation_framerate: int = max(1, animation_xml_element.get_elements("framerate").front().get_int("value"))
@@ -211,7 +211,8 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 		var global_frame_png_path: String = temp_dir_path_result.value \
 			.path_join("%s%04d.png" % [png_base_name, image_idx])
 		if FileAccess.file_exists(global_frame_png_path):
-			frames_images.push_back(Image.load_from_file(global_frame_png_path))
+			var image: Image = Image.load_from_file(global_frame_png_path)
+			frames_images.push_back(image)
 		else:
 			frames_images.push_back(frames_images.back())
 		DirAccess.remove_absolute(global_frame_png_path)
@@ -224,6 +225,13 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
 
+	var atlas_making_result: AtlasMaker.Result = atlas_maker \
+		.make_atlas(sprite_sheet_building_result.atlas_image)
+	if atlas_making_result.error:
+		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
+		return result
+	sprite_sheet.atlas = atlas_making_result.atlas
+
 	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
 
@@ -235,7 +243,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 		var animation = _Common.AnimationInfo.new()
 		animation.name = animation_params_parsing_result.name
 		if animation.name == autoplay_animation_name:
-			animation_library.autoplay_animation_index = animation_index
+			animation_library.autoplay_index = animation_index
 		animation.direction = animation_params_parsing_result.direction
 		animation.repeat_count = animation_params_parsing_result.repeat_count
 		for animation_frame_index in animation_params_parsing_result.frames_count:
@@ -249,7 +257,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> _Common.Expor
 			animation.frames.push_back(frame)
 		animation_library.animations.push_back(animation)
 
-	if not autoplay_animation_name.is_empty() and animation_library.autoplay_animation_index < 0:
+	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
 	result.success(sprite_sheet, animation_library)

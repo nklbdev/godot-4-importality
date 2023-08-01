@@ -1,10 +1,12 @@
+@tool
 extends "_.gd"
 
 func _init() -> void: super("SpriteFrames", "SpriteFrames", "res")
 
 func import(
 	res_source_file_path: String,
-	export_result: _Common.ExportResult,
+	sprite_sheet: _Common.SpriteSheetInfo,
+	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
 	save_path: String
 	) -> _Common.ImportResult:
@@ -15,28 +17,40 @@ func import(
 		sprite_frames.remove_animation(animation_name)
 
 	var filter_clip_enabled: bool = options[_Options.ATLAS_TEXTURES_REGION_FILTER_CLIP_ENABLED]
-	var atlas_textures: Dictionary = {}
-	for animation in export_result.animation_library.animations:
+	var atlas_textures: Array[AtlasTexture]
+	var empty_atlas_texture: AtlasTexture
+	for animation in animation_library.animations:
 		sprite_frames.add_animation(animation.name)
 		sprite_frames.set_animation_loop(animation.name, animation.repeat_count == 0)
 		sprite_frames.set_animation_speed(animation.name, 1)
 		var previous_texture: Texture2D
-		for frame in animation.get_output_frames():
-			var atlas_texture = atlas_textures.get(frame.sprite.region)
-			if atlas_texture == null:
-				atlas_texture = AtlasTexture.new()
-				atlas_texture.filter_clip = filter_clip_enabled
-				atlas_texture.atlas = export_result.sprite_sheet.atlas
-				if frame.sprite.region.has_area():
-					atlas_texture.region = frame.sprite.region
-					atlas_texture.margin = Rect2(
-						frame.sprite.offset,
-						export_result.sprite_sheet.source_image_size - frame.sprite.region.size)
-				else:
-					atlas_texture.region = Rect2i(0, 0, 1, 1)
-					atlas_texture.margin = Rect2(2, 2, 0, 0)
-				atlas_textures[frame.sprite.region] = atlas_texture
-			elif atlas_texture == previous_texture:
+		for frame in animation.get_flatten_frames():
+			var atlas_texture: AtlasTexture
+			if frame.sprite.region.has_area():
+				var region: Rect2 = frame.sprite.region
+				var margin: Rect2 = Rect2(
+					frame.sprite.offset,
+					sprite_sheet.source_image_size - frame.sprite.region.size)
+				var equivalent_atlas_textures: Array = atlas_textures.filter(
+					func(t: AtlasTexture) -> bool: return t.margin == margin and t.region == region)
+				if not equivalent_atlas_textures.is_empty():
+					atlas_texture.front()
+				if atlas_texture == null:
+					atlas_texture = AtlasTexture.new()
+					atlas_texture.filter_clip = filter_clip_enabled
+					atlas_texture.atlas = sprite_sheet.atlas
+					atlas_texture.region = region
+					atlas_texture.margin = margin
+					atlas_textures.push_back(atlas_texture)
+			else:
+				if empty_atlas_texture == null:
+					empty_atlas_texture = AtlasTexture.new()
+					empty_atlas_texture.filter_clip = filter_clip_enabled
+					empty_atlas_texture.atlas = sprite_sheet.atlas
+					empty_atlas_texture.region = Rect2(0, 0, 1, 1)
+					empty_atlas_texture.margin = Rect2(2, 2, 0, 0)
+				atlas_texture = empty_atlas_texture
+			if atlas_texture == previous_texture:
 				var last_frame_index: int = sprite_frames.get_frame_count(animation.name) - 1
 				sprite_frames.set_frame(animation.name, last_frame_index, atlas_texture,
 					sprite_frames.get_frame_duration(animation.name, last_frame_index) + frame.duration)
