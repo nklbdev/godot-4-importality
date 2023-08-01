@@ -3,7 +3,7 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
 [![en](https://img.shields.io/badge/lang-ru-green.svg)](README.ru.md)
 
-![all_in_one](https://github.com/nklbdev/godot-4-importality/assets/7024016/c3b866ec-b892-45a1-a73e-03e3af86d96b)
+![all_in_one](https://github.com/nklbdev/godot-4-importality/assets/7024016/16a6d973-bf99-4d88-b9a1-d68b72323c3b)
 ![icon](https://github.com/nklbdev/godot-4-importality/assets/7024016/978a36e8-61e0-406e-8a35-b872eff51be0)
 
 **Importality - is an add-on for [Godot](https://godotengine.org) engine for importing graphics and animations from popular formats.**
