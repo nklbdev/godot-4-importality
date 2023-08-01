@@ -5,7 +5,7 @@
 extends "_.gd"
 
 const __aseprite_sheet_types_by_sprite_sheet_layout: PackedStringArray = \
-	[ "rows", "columns", "packed" ]
+	[ "packed", "rows", "columns" ]
 const __aseprite_animation_directions: PackedStringArray = \
 	[ "forward", "reverse", "pingpong", "pingpong_reverse" ]
 
@@ -85,7 +85,8 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 			"--sheet-type", __aseprite_sheet_types_by_sprite_sheet_layout[sprite_sheet_layout],
 			] + variable_options + [
 			"--sheet", global_png_path,
-			ProjectSettings.globalize_path(res_source_file_path)]),
+			ProjectSettings.globalize_path(res_source_file_path)
+		]),
 		output, true, false)
 	if exit_code:
 		result.fail(ERR_QUERY_FAILED, "An error occurred while executing the Aseprite command. Process exited with code %s" % [exit_code])
@@ -96,35 +97,52 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	var source_size_data = json.data.frames[0].sourceSize
 	sprite_sheet.source_image_size = Vector2i(source_size_data.w, source_size_data.h)
 
-	var atlas_making_result: AtlasMaker.Result = atlas_maker \
-		.make_atlas(Image.load_from_file(global_png_path))
-	DirAccess.remove_absolute(global_png_path)
-	if atlas_making_result.error:
-		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
-		return result
-	sprite_sheet.atlas = atlas_making_result.atlas
-
 	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges().strip_escapes()
-	var sprites_by_rect_positions: Dictionary
+	var sprites: Array[_Common.SpriteInfo]
 	var frames: Array[_Common.FrameInfo]
 	for frame_data in json.data.frames:
 		var sprite_region: Rect2i = Rect2i(
 			frame_data.frame.x, frame_data.frame.y,
 			frame_data.frame.w, frame_data.frame.h)
+		var sprite_offset = Vector2i(
+			frame_data.spriteSourceSize.x, frame_data.spriteSourceSize.y)
+
+		var equivalent_sprites: Array = sprites.filter(
+			func(s: _Common.SpriteInfo) -> bool: return s.region == sprite_region and s.offset == sprite_offset)
 		var sprite: _Common.SpriteInfo
-		if sprites_by_rect_positions.has(sprite_region.position):
-			sprite = sprites_by_rect_positions[sprite_region.position]
-		else:
+		if equivalent_sprites.is_empty():
 			sprite = _Common.SpriteInfo.new()
-			sprites_by_rect_positions[sprite_region.position] = sprite
 			sprite.region = sprite_region
 			sprite.offset = Vector2i(
 				frame_data.spriteSourceSize.x, frame_data.spriteSourceSize.y)
+			sprites.push_back(sprite)
+		else:
+			sprite = equivalent_sprites.front()
 		var frame: _Common.FrameInfo = _Common.FrameInfo.new()
 		frame.sprite = sprite
 		frame.duration = frame_data.duration * 0.001
 		frames.push_back(frame)
+
+	var atlas_image: Image = Image.load_from_file(global_png_path)
+	if options[_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD] == \
+		_Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
+		var atlas_image_with_surrounding: Image = Image.create(
+			atlas_image.get_width(), atlas_image.get_height(), false, Image.FORMAT_RGBA8)
+		atlas_image_with_surrounding.fill(options[_Options.SPRITES_SURROUNDING_COLOR])
+		for sprite in sprites:
+			if sprite.region.has_area():
+				atlas_image_with_surrounding.blit_rect(atlas_image, sprite.region, sprite.region.position)
+		atlas_image = atlas_image_with_surrounding
+
+
+	var atlas_making_result: AtlasMaker.Result = atlas_maker \
+		.make_atlas(atlas_image)
+	DirAccess.remove_absolute(global_png_path)
+	if atlas_making_result.error:
+		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
+		return result
+	sprite_sheet.atlas = atlas_making_result.atlas
 
 	var tags_data: Array = json.data.meta.frameTags
 	var unique_names: Array[String] = []
