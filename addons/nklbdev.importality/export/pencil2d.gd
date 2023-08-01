@@ -11,7 +11,7 @@ var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.ne
 	"pencil2d_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
 	"", true, func(v: PackedStringArray): return false)
 
-const __ANIMATIONS_PARAMETERS_OPTION: StringName = "importers/pencil2d/animations_parameters"
+const __ANIMATIONS_PARAMETERS_OPTION: StringName = "pencil2d/animations_parameters"
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["pclx"]

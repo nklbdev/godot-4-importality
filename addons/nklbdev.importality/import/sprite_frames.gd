@@ -34,7 +34,7 @@ func import(
 				var equivalent_atlas_textures: Array = atlas_textures.filter(
 					func(t: AtlasTexture) -> bool: return t.margin == margin and t.region == region)
 				if not equivalent_atlas_textures.is_empty():
-					atlas_texture.front()
+					atlas_texture = equivalent_atlas_textures.front()
 				if atlas_texture == null:
 					atlas_texture = AtlasTexture.new()
 					atlas_texture.filter_clip = filter_clip_enabled

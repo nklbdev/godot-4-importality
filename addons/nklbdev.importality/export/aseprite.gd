@@ -21,8 +21,11 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["ase", "aseprite"]
 	super("Aseprite", recognized_extensions, [], editor_file_system,
 		[__os_command_project_setting, __os_command_arguments_project_setting],
-		CustomImageFormatLoaderExtension.new(recognized_extensions,
-		__os_command_project_setting, __os_command_arguments_project_setting))
+		CustomImageFormatLoaderExtension.new(
+			recognized_extensions,
+			__os_command_project_setting,
+			__os_command_arguments_project_setting,
+			_common_temporary_files_directory_path_project_setting))
 
 func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
@@ -170,11 +173,14 @@ class CustomImageFormatLoaderExtension:
 
 	func _init(recognized_extensions: PackedStringArray,
 		os_command_project_setting: _ProjectSetting,
-		os_command_arguments_project_setting: _ProjectSetting
+		os_command_arguments_project_setting: _ProjectSetting,
+		common_temporary_files_directory_path_project_setting: _ProjectSetting
 		) -> void:
 		__recognized_extensions = recognized_extensions
 		__os_command_project_setting = os_command_project_setting
 		__os_command_arguments_project_setting = os_command_arguments_project_setting
+		__common_temporary_files_directory_path_project_setting = \
+			common_temporary_files_directory_path_project_setting
 
 	func _get_recognized_extensions() -> PackedStringArray:
 		return __recognized_extensions

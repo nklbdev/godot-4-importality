@@ -29,6 +29,9 @@ var __recognized_extensions: PackedStringArray
 var __project_settings: Array[_ProjectSetting] = [_common_temporary_files_directory_path_project_setting]
 var __editor_file_system: EditorFileSystem
 var __options: Array[Dictionary] = [
+	_Options.create_option(_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD, _Common.EdgesArtifactsAvoidanceMethod.NONE,
+		PROPERTY_HINT_ENUM, ",".join(_Common.EDGES_ARTIFACTS_AVOIDANCE_METHODS_NAMES),
+		PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED),
 	_Options.create_option(_Options.SPRITE_SHEET_LAYOUT, _Common.SpriteSheetLayout.PACKED,
 		PROPERTY_HINT_ENUM, ",".join(_Common.SPRITE_SHEET_LAYOUTS_NAMES),
 		PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED),
@@ -36,19 +39,22 @@ var __options: Array[Dictionary] = [
 		PROPERTY_HINT_RANGE, "0,,1,or_greater", PROPERTY_USAGE_DEFAULT,
 		func(o): return o[_Options.SPRITE_SHEET_LAYOUT] != \
 			_Common.SpriteSheetLayout.PACKED),
-	_Options.create_option(_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD, _Common.EdgesArtifactsAvoidanceMethod.NONE,
-		PROPERTY_HINT_ENUM, ",".join(_Common.EDGES_ARTIFACTS_AVOIDANCE_METHODS_NAMES),
-		PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED),
 	_Options.create_option(_Options.SPRITES_SURROUNDING_COLOR, Color.TRANSPARENT,
 		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT,
 		func(o): return o[_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD] == \
 			_Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING),
 	_Options.create_option(_Options.TRIM_SPRITES_TO_OVERALL_MIN_SIZE, true,
-		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
+		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT,
+		func(o): return o[_Options.SPRITE_SHEET_LAYOUT] != \
+			_Common.SpriteSheetLayout.PACKED),
 	_Options.create_option(_Options.COLLAPSE_TRANSPARENT_SPRITES, true,
-		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
+		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT,
+		func(o): return o[_Options.SPRITE_SHEET_LAYOUT] != \
+			_Common.SpriteSheetLayout.PACKED),
 	_Options.create_option(_Options.MERGE_DUPLICATED_SPRITES, true,
-		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
+		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT,
+		func(o): return o[_Options.SPRITE_SHEET_LAYOUT] != \
+			_Common.SpriteSheetLayout.PACKED),
 ]
 var __image_format_loader_extension: ImageFormatLoaderExtension
 
