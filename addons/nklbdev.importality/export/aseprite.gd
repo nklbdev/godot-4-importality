@@ -206,17 +206,17 @@ class CustomImageFormatLoaderExtension:
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
 		var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 		if os_command_result.error:
-			push_error(os_command_result.error_message)
+			push_error(os_command_result.error_description)
 			return os_command_result.error
 
 		var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
 		if os_command_arguments_result.error:
-			push_error(os_command_arguments_result.error_message)
+			push_error(os_command_arguments_result.error_description)
 			return os_command_arguments_result.error
 
 		var temp_dir_path_result: _ProjectSetting.Result = __common_temporary_files_directory_path_project_setting.get_value()
 		if temp_dir_path_result.error:
-			push_error(temp_dir_path_result.error_message)
+			push_error(temp_dir_path_result.error_description)
 			return temp_dir_path_result.error
 
 		flags = flags as ImageFormatLoader.LoaderFlags
