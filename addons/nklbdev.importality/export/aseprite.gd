@@ -47,136 +47,116 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 
 	var png_path: String = temp_dir_path_result.value.path_join("temp.png")
 	var global_png_path: String = ProjectSettings.globalize_path(png_path)
-	var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
-	result.sprite_sheet = sprite_sheet
-	var sprite_sheet_layout: _Common.SpriteSheetLayout = options[_Options.SPRITE_SHEET_LAYOUT]
-
-	var variable_options: Array
-	if sprite_sheet_layout == _Common.SpriteSheetLayout.HORIZONTAL_STRIPS:
-		variable_options += ["--sheet-columns", str(options[_Options.MAX_CELLS_IN_STRIP])]
-	if sprite_sheet_layout == _Common.SpriteSheetLayout.VERTICAL_STRIPS:
-		variable_options += ["--sheet-rows", str(options[_Options.MAX_CELLS_IN_STRIP])]
-	match options[_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD]:
-		_Common.EdgesArtifactsAvoidanceMethod.NONE:
-			pass
-		_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_SPACING:
-			variable_options += ["--shape-padding", "1"]
-		_Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
-			variable_options += ["--shape-padding", "1", "--border-padding", "1"]
-		_Common.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
-			variable_options += ["--extrude"]
-		_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
-			variable_options += ["--inner-padding", "1"]
-	if options[_Options.COLLAPSE_TRANSPARENT_SPRITES]: variable_options += ["--ignore-empty"]
-	if options[_Options.MERGE_DUPLICATED_SPRITES]: variable_options += ["--merge-duplicates"]
-	if options[_Options.TRIM_SPRITES_TO_OVERALL_MIN_SIZE]: variable_options += \
-		["--trim" if sprite_sheet_layout == _Common.SpriteSheetLayout.PACKED else "--trim-sprite"]
+	var json_path: String = temp_dir_path_result.value.path_join("temp.json")
+	var global_json_path: String = ProjectSettings.globalize_path(json_path)
 
 	var output: Array = []
 	var exit_code: int = OS.execute(
 		os_command_result.value,
 		os_command_arguments_result.value + PackedStringArray([
 			"--batch",
-			"--filename-format", "{tag}{tagframe}",
 			"--format", "json-array",
 			"--list-tags",
-			"--trim" if sprite_sheet_layout == _Common.SpriteSheetLayout.PACKED else
-				"--trim-sprite" if options[_Options.TRIM_SPRITES_TO_OVERALL_MIN_SIZE] else "",
-			"--sheet-type", __aseprite_sheet_types_by_sprite_sheet_layout[sprite_sheet_layout],
-			] + variable_options + [
 			"--sheet", global_png_path,
-			ProjectSettings.globalize_path(res_source_file_path)
-		]),
+			"--data", global_json_path,
+			ProjectSettings.globalize_path(res_source_file_path)]),
 		output, true, false)
 	if exit_code:
 		result.fail(ERR_QUERY_FAILED, "An error occurred while executing the Aseprite command. Process exited with code %s" % [exit_code])
 		return result
+	var raw_atlas_image: Image = Image.load_from_file(global_png_path)
+	DirAccess.remove_absolute(global_png_path)
 	var json = JSON.new()
-	json.parse(output[0])
+	var err: Error = json.parse(FileAccess.get_file_as_string(global_json_path))
+	if err:
+		result.fail(ERR_INVALID_DATA, "Unable to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
+		return result
+	#DirAccess.remove_absolute(global_json_path)
+	var raw_sprite_sheet_data: Dictionary = json.data
 
-	var source_size_data = json.data.frames[0].sourceSize
-	sprite_sheet.source_image_size = Vector2i(source_size_data.w, source_size_data.h)
+	var sprite_sheet_layout: _Common.SpriteSheetLayout = options[_Options.SPRITE_SHEET_LAYOUT]
+	var source_image_size: Vector2i = _Common.get_vector2i(
+		raw_sprite_sheet_data.frames[0].sourceSize, "w", "h")
 
-	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
-	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges().strip_escapes()
-	var sprites: Array[_Common.SpriteInfo]
-	var frames: Array[_Common.FrameInfo]
-	for frame_data in json.data.frames:
-		var sprite_region: Rect2i = Rect2i(
-			frame_data.frame.x, frame_data.frame.y,
-			frame_data.frame.w, frame_data.frame.h)
-		var sprite_offset = Vector2i(
-			frame_data.spriteSourceSize.x, frame_data.spriteSourceSize.y)
+	var frames_images_by_indices: Dictionary
+	var tags_data: Array = raw_sprite_sheet_data.meta.frameTags
+	var frames_data: Array = raw_sprite_sheet_data.frames
+	var frames_count: int = frames_data.size()
+	if tags_data.is_empty():
+		tags_data.push_back({
+			name = options[_Options.DEFAULT_ANIMATION_NAME],
+			from = 0,
+			to = frames_count - 1,
+			direction = __aseprite_animation_directions[options[_Options.DEFAULT_ANIMATION_DIRECTION]],
+			repeat = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
+		})
+	var animations_count: int = tags_data.size()
+	for tag_data in tags_data:
+		for frame_index in range(tag_data.from, tag_data.to + 1):
+			if frames_images_by_indices.has(frame_index):
+				continue
+			var frame_data: Dictionary = frames_data[frame_index]
+			frames_images_by_indices[frame_index] = raw_atlas_image.get_region(Rect2i(
+				_Common.get_vector2i(frame_data.frame, "x", "y"),
+				source_image_size))
+	var used_frames_indices: PackedInt32Array = PackedInt32Array(frames_images_by_indices.keys())
+	used_frames_indices.sort()
+	var used_frames_count: int = used_frames_indices.size()
+	var sprite_sheet_frames_indices_by_global_frame_indices: Dictionary
+	for sprite_sheet_frame_index in used_frames_indices.size():
+		sprite_sheet_frames_indices_by_global_frame_indices[
+			used_frames_indices[sprite_sheet_frame_index]] = \
+			sprite_sheet_frame_index
+	var used_frames_images: Array[Image]
+	used_frames_images.resize(used_frames_count)
+	for i in used_frames_count:
+		used_frames_images[i] = frames_images_by_indices[used_frames_indices[i]]
 
-		var equivalent_sprites: Array = sprites.filter(
-			func(s: _Common.SpriteInfo) -> bool: return s.region == sprite_region and s.offset == sprite_offset)
-		var sprite: _Common.SpriteInfo
-		if equivalent_sprites.is_empty():
-			sprite = _Common.SpriteInfo.new()
-			sprite.region = sprite_region
-			sprite.offset = Vector2i(
-				frame_data.spriteSourceSize.x, frame_data.spriteSourceSize.y)
-			sprites.push_back(sprite)
-		else:
-			sprite = equivalent_sprites.front()
-		var frame: _Common.FrameInfo = _Common.FrameInfo.new()
-		frame.sprite = sprite
-		frame.duration = frame_data.duration * 0.001
-		frames.push_back(frame)
+	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
 
-	var atlas_image: Image = Image.load_from_file(global_png_path)
-	if options[_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD] == \
-		_Common.EdgesArtifactsAvoidanceMethod.SOLID_COLOR_SURROUNDING:
-		var atlas_image_with_surrounding: Image = Image.create(
-			atlas_image.get_width(), atlas_image.get_height(), false, Image.FORMAT_RGBA8)
-		atlas_image_with_surrounding.fill(options[_Options.SPRITES_SURROUNDING_COLOR])
-		for sprite in sprites:
-			if sprite.region.has_area():
-				atlas_image_with_surrounding.blit_rect(atlas_image, sprite.region, sprite.region.position)
-		atlas_image = atlas_image_with_surrounding
-
+	var sprite_sheet_building_result: _SpriteSheetBuilderBase.Result = sprite_sheet_builder.build_sprite_sheet(used_frames_images)
+	if sprite_sheet_building_result.error:
+		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
+		return result
+	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
 
 	var atlas_making_result: AtlasMaker.Result = atlas_maker \
-		.make_atlas(atlas_image)
-	DirAccess.remove_absolute(global_png_path)
+		.make_atlas(sprite_sheet_building_result.atlas_image)
 	if atlas_making_result.error:
 		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
 		return result
 	sprite_sheet.atlas = atlas_making_result.atlas
 
-	var tags_data: Array = json.data.meta.frameTags
-	var unique_names: Array[String] = []
-	if tags_data.is_empty():
-		var default_animation_name: String = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
-		if not default_animation_name.is_empty():
-			# default animation
-			var default_animation: _Common.AnimationInfo = _Common.AnimationInfo.new()
-			default_animation.name = default_animation_name
-			default_animation.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
-			default_animation.frames = frames
-			animation_library.animations.append(default_animation)
-	else:
-		for tag_data in tags_data:
-			var animation: _Common.AnimationInfo = _Common.AnimationInfo.new()
-			animation.name = tag_data.name.strip_edges().strip_escapes()
-			if animation.name.is_empty():
-				result.fail(ERR_INVALID_DATA, "Found empty tag name")
-				return result
-			if unique_names.has(animation.name):
-				result.fail(ERR_INVALID_DATA, "Found duplicated tag name")
-				return result
-			unique_names.append(animation.name)
+	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
+	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
 
-			animation.direction = __aseprite_animation_directions.find(tag_data.direction)
-			animation.repeat_count = int(tag_data.get("repeat", "0"))
-			animation.frames = frames.slice(tag_data.from, tag_data.to + 1)
-			if autoplay_animation_name and autoplay_animation_name == animation.name:
-				animation_library.autoplay_index = animation_library.animations.size() - 1
-			animation_library.animations.append(animation)
-
-		if autoplay_animation_name and animation_library.autoplay_index < 0:
-			result.fail(ERR_INVALID_DATA, "Autoplay animation not found by name: %s" % autoplay_animation_name)
+	var all_frames: Array[_Common.FrameInfo]
+	all_frames.resize(used_frames_count)
+	for animation_index in animations_count:
+		var tag_data: Dictionary = tags_data[animation_index]
+		var animation = _Common.AnimationInfo.new()
+		animation.name = tag_data.name.strip_edges()
+		if animation.name.is_empty():
+			result.fail(ERR_INVALID_DATA, "A tag with empty name found")
 			return result
+		if animation.name == autoplay_animation_name:
+			animation_library.autoplay_index = animation_index
+		animation.direction = __aseprite_animation_directions.find(tag_data.direction)
+		animation.repeat_count = tag_data.get("repeat", "0")
+		for global_frame_index in range(tag_data.from, tag_data.to + 1):
+			var sprite_sheet_frame_index: int = \
+				sprite_sheet_frames_indices_by_global_frame_indices[global_frame_index]
+			var frame: _Common.FrameInfo = all_frames[sprite_sheet_frame_index]
+			if frame == null:
+				frame = _Common.FrameInfo.new()
+				frame.sprite = sprite_sheet.sprites[sprite_sheet_frame_index]
+				frame.duration = frames_data[global_frame_index].duration * 0.001
+				all_frames[sprite_sheet_frame_index] = frame
+			animation.frames.push_back(frame)
+		animation_library.animations.push_back(animation)
+
+	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
+		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
 	result.success(sprite_sheet, animation_library)
 	return result
@@ -204,6 +184,8 @@ class CustomImageFormatLoaderExtension:
 		return __recognized_extensions
 
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
+		var global_source_file_path: String = file_access.get_path_absolute()
+
 		var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 		if os_command_result.error:
 			push_error(os_command_result.error_description)
@@ -219,28 +201,37 @@ class CustomImageFormatLoaderExtension:
 			push_error(temp_dir_path_result.error_description)
 			return temp_dir_path_result.error
 
-		flags = flags as ImageFormatLoader.LoaderFlags
-
-		var source_file_path: String = ProjectSettings.globalize_path(file_access.get_path_absolute())
 		var png_path: String = temp_dir_path_result.value.path_join("temp.png")
 		var global_png_path: String = ProjectSettings.globalize_path(png_path)
+		var json_path: String = temp_dir_path_result.value.path_join("temp.json")
+		var global_json_path: String = ProjectSettings.globalize_path(json_path)
 
 		var output: Array = []
 		var exit_code: int = OS.execute(
 			os_command_result.value,
 			os_command_arguments_result.value + PackedStringArray([
 				"--batch",
-				source_file_path,
-				"--frame-range", "0,0",
-				"--save-as",
-				global_png_path]),
+				"--format", "json-array",
+				"--list-tags",
+				"--sheet", global_png_path,
+				"--data", global_json_path,
+				global_source_file_path]),
 			output, true, false)
 		if exit_code:
-			push_error("An error occurred while executing the Aseprite command: %s" % error_string(exit_code))
-			return exit_code
-
-		image.load_png_from_buffer(FileAccess.get_file_as_bytes(global_png_path))
+			push_error("An error occurred while executing the Aseprite command. Process exited with code %s" % [exit_code])
+			return ERR_QUERY_FAILED
+		var raw_atlas_image: Image = Image.load_from_file(global_png_path)
 		DirAccess.remove_absolute(global_png_path)
+		var json = JSON.new()
+		var err: Error = json.parse(FileAccess.get_file_as_string(global_json_path))
+		if err:
+			push_error("Unable to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
+			return ERR_INVALID_DATA
+		DirAccess.remove_absolute(global_json_path)
+		var raw_sprite_sheet_data: Dictionary = json.data
 
+		var source_image_size: Vector2i = _Common.get_vector2i(
+			raw_sprite_sheet_data.frames[0].sourceSize, "w", "h")
+
+		image.copy_from(raw_atlas_image.get_region(Rect2i(Vector2i.ZERO, source_image_size)))
 		return OK
-

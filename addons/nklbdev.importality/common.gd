@@ -67,8 +67,9 @@ class AnimationInfo:
 			iteration_frames.reverse()
 		if direction == AnimationDirection.PING_PONG or direction == AnimationDirection.PING_PONG_REVERSE:
 			var returning_frames: Array[FrameInfo] = iteration_frames.duplicate()
-			returning_frames.pop_front()
+			returning_frames.pop_back()
 			returning_frames.reverse()
+			returning_frames.pop_back()
 			iteration_frames.append_array(returning_frames)
 		if repeat_count <= 1:
 			return iteration_frames
@@ -139,43 +140,5 @@ class ImportResult:
 		self.resource = resource
 		self.resource_saver_flags = resource_saver_flags
 
-static func simplify(value: Variant, deep: bool = false, with_privates: bool = false) -> Variant:
-	var type: Variant.Type = typeof(value)
-	if type < TYPE_OBJECT:
-		return value
-	elif type > TYPE_ARRAY:
-		return value.duplicate()
-	else:
-		match type:
-			TYPE_OBJECT:
-				if value == null:
-					return null
-				var result: Dictionary
-				for property_info in value.get_property_list():
-					if property_info.usage & PROPERTY_USAGE_SCRIPT_VARIABLE == 0:
-						continue
-					var property_name: StringName = property_info.name
-					if property_name.begins_with("_") and not with_privates:
-						continue
-					result[property_name] = simplify(value.get(property_name), true)
-				return result
-			TYPE_CALLABLE: return null
-			TYPE_SIGNAL: return null
-			TYPE_DICTIONARY:
-				if not deep:
-					return value.duplicate()
-				var result: Dictionary
-				for key in value.keys():
-					result[key] = simplify(value[key], true)
-				return result
-			TYPE_ARRAY:
-				if not deep:
-					return value.duplicate()
-				var size: int = value.size()
-				var result: Array
-				result.resize(size)
-				for index in size:
-					result[index] = simplify(value[index], true)
-				return result
-			_: assert(false, "Unexpected value type: %s" % [type])
-	return null
+static func get_vector2i(dict: Dictionary, x_key: String, y_key: String) -> Vector2i:
+	return Vector2i(int(dict[x_key]), int(dict[y_key]))

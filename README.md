@@ -23,7 +23,7 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 ## 🎯 Features
 
 - Adding recognition of source graphic files as images to Godot with all the standard features for importing them (for animated files, only the first frame will be imported).
-- Support for Aseprite, GraphicsGale, Krita, Pencil2D, Piskel, Pixelorama and GIF files. Other formats may be supported in the future.
+- Support for Aseprite (and LibreSprite), Krita, Pencil2D, Piskel and Pixelorama files. Other formats may be supported in the future.
 - Import files as:
      - Atlas of sprites (sprite sheet) - texture with metadata;
      - `SpriteFrames` resource to create your own `AnimatedSprite2D` and `AnimatedSprite3D` based on it;
@@ -46,7 +46,7 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 ## 👷 How to use
 
 **Be sure to read the wiki article about the editor you are using! These articles describe the important nuances of configuring the integration!**
-- [Aseprite](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-aseprite-(en)) (Important)
+- [Aseprite/LibreSprite](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-aseprite-(en)) (Important)
 - [Krita](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-krita-(en)) (**Critical!**)
 - [Pencil2D](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-pencil_2d-(en)) (Important)
 - [Piskel](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-piskel-(en)) (No integration with the application. The plugin uses its own source file parser)
