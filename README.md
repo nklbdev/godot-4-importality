@@ -45,7 +45,14 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 
 ## 👷 How to use
 
-Full documentation can be found on [wiki](https://github.com/nklbdev/godot-4-importality/wiki/home).
+**Be sure to read the wiki article about the editor you are using! These articles describe the important nuances of configuring the integration!**
+- [Aseprite](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-aseprite-(en)) (Important)
+- [Krita](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-krita-(en)) (**Critical!**)
+- [Pencil2D](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-pencil_2d-(en)) (Important)
+- [Piskel](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-piskel-(en)) (No integration with the application. The plugin uses its own source file parser)
+- [Pixelorama](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-pixelorama-(en)) (No integration with the application. The plugin uses its own source file parser)
+
+Then:
 
 1. Save the files of your favorite graphics editor to the Godot project folder.
 1. Select them in the Godot file system tree. They are already imported as a `Texture2D` resource.
