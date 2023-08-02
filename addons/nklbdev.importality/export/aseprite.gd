@@ -154,7 +154,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 			default_animation.name = default_animation_name
 			default_animation.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
 			default_animation.frames = frames
-			result.animation_library.animations.append(default_animation)
+			animation_library.animations.append(default_animation)
 	else:
 		for tag_data in tags_data:
 			var animation: _Common.AnimationInfo = _Common.AnimationInfo.new()
