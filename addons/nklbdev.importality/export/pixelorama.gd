@@ -18,8 +18,16 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	var result: _Common.ExportResult = _Common.ExportResult.new()
 
 	var file: FileAccess = FileAccess.open_compressed(res_source_file_path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
-	if file == null and file.get_open_error() == ERR_FILE_UNRECOGNIZED:
-		file.open(res_source_file_path, FileAccess.READ)
+	if file == null or file.get_open_error() == ERR_FILE_UNRECOGNIZED:
+		file = FileAccess.open(res_source_file_path, FileAccess.READ)
+	if file == null:
+		result.fail(ERR_FILE_CANT_OPEN, "Unable to open file with unknown error")
+		return result
+	var open_error: Error = file.get_open_error()
+	if open_error:
+		result.fail(ERR_FILE_CANT_OPEN, "Unable to open file with error: %s \"%s\"" % [open_error, error_string(open_error)])
+		return result
+
 	var first_line: String = file.get_line()
 	var images_data: PackedByteArray = file.get_buffer(file.get_length() - file.get_position())
 	file.close()
@@ -174,8 +182,16 @@ class CustomImageFormatLoaderExtension:
 
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
 		var file: FileAccess = FileAccess.open_compressed(file_access.get_path(), FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
-		if file == null and file.get_open_error() == ERR_FILE_UNRECOGNIZED:
-			file.open(file_access.get_path(), FileAccess.READ)
+		if file == null or file.get_open_error() == ERR_FILE_UNRECOGNIZED:
+			file = FileAccess.open(file_access.get_path(), FileAccess.READ)
+		if file == null:
+			push_error("Unable to open file with unknown error")
+			return ERR_FILE_CANT_OPEN
+		var open_error: Error = file.get_open_error()
+		if open_error:
+			push_error("Unable to open file with error: %s \"%s\"" % [open_error, error_string(open_error)])
+			return ERR_FILE_CANT_OPEN
+
 		var first_line: String = file.get_line()
 
 		var pxo_project: Dictionary = JSON.parse_string(first_line)
