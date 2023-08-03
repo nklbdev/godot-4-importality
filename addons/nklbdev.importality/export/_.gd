@@ -213,10 +213,6 @@ static func _parse_animation_params(
 	if result.frames_count <= 0:
 		result.fail(ERR_UNCONFIGURED, "Animation frames count is required but not specified")
 		return result
-	if result.repeat_count < 0:
-		result.repeat_count = 1
-	if result.direction < 0:
-		result.direction = _Common.AnimationDirection.FORWARD
 	return result
 
 func _create_sprite_sheet_builder(options: Dictionary) -> _SpriteSheetBuilderBase:

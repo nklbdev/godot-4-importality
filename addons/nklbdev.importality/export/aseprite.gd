@@ -1,7 +1,4 @@
 @tool
-# @tool надо писать, чтобы не только можно было инстанциировать этот скрипт,
-# а еще чтобы инициализировалась статика в нем!
-# И не важно, что в родительском классе эта директива уже есть!
 extends "_.gd"
 
 const __aseprite_sheet_types_by_sprite_sheet_layout: PackedStringArray = \
@@ -10,11 +7,11 @@ const __aseprite_animation_directions: PackedStringArray = \
 	[ "forward", "reverse", "pingpong", "pingpong_reverse" ]
 
 var __os_command_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"aseprite_command", "", TYPE_STRING, PROPERTY_HINT_NONE,
+	"aseprite_or_libre_sprite_command", "", TYPE_STRING, PROPERTY_HINT_NONE,
 	"", true, func(v: String): return v.is_empty())
 
 var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"aseprite_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
+	"aseprite_or_libre_sprite_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
 	"", true, func(v: PackedStringArray): return false)
 
 func _init(editor_file_system: EditorFileSystem) -> void:
@@ -83,8 +80,11 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	var frames_data: Array = raw_sprite_sheet_data.frames
 	var frames_count: int = frames_data.size()
 	if tags_data.is_empty():
+		var default_animation_name: String = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
+		if default_animation_name.is_empty():
+			default_animation_name = "default"
 		tags_data.push_back({
-			name = options[_Options.DEFAULT_ANIMATION_NAME],
+			name = default_animation_name,
 			from = 0,
 			to = frames_count - 1,
 			direction = __aseprite_animation_directions[options[_Options.DEFAULT_ANIMATION_DIRECTION]],
@@ -132,17 +132,37 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 
 	var all_frames: Array[_Common.FrameInfo]
 	all_frames.resize(used_frames_count)
+	var unique_animations_names: PackedStringArray
 	for animation_index in animations_count:
 		var tag_data: Dictionary = tags_data[animation_index]
+
+		var animation_params_parsing_result: AnimationParamsParsingResult = _parse_animation_params(
+			tag_data.name.strip_edges(),
+			AnimationOptions.Direction | AnimationOptions.RepeatCount,
+			tag_data.from,
+			tag_data.to - tag_data.from + 1)
+		if animation_params_parsing_result.error:
+			result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters",
+				animation_params_parsing_result)
+			return result
+		if unique_animations_names.has(animation_params_parsing_result.name):
+			result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %
+				[animation_params_parsing_result.name, animation_index])
+			return result
+		unique_animations_names.push_back(animation_params_parsing_result.name)
 		var animation = _Common.AnimationInfo.new()
-		animation.name = tag_data.name.strip_edges()
+		animation.name = animation_params_parsing_result.name
 		if animation.name.is_empty():
 			result.fail(ERR_INVALID_DATA, "A tag with empty name found")
 			return result
 		if animation.name == autoplay_animation_name:
 			animation_library.autoplay_index = animation_index
 		animation.direction = __aseprite_animation_directions.find(tag_data.direction)
-		animation.repeat_count = tag_data.get("repeat", "0")
+		if animation_params_parsing_result.direction >= 0:
+			animation.direction = animation_params_parsing_result.direction
+		animation.repeat_count = int(tag_data.get("repeat", "1"))
+		if animation_params_parsing_result.repeat_count >= 0:
+			animation.repeat_count = animation_params_parsing_result.repeat_count
 		for global_frame_index in range(tag_data.from, tag_data.to + 1):
 			var sprite_sheet_frame_index: int = \
 				sprite_sheet_frames_indices_by_global_frame_indices[global_frame_index]

@@ -34,7 +34,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		if pxo_layer.type == PxoLayerType.PIXEL_LAYER:
 			pixel_layers_count += 1
 
-	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME]
+	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
 	var unique_frames_indices_by_frame_index: Dictionary
 	var unique_frames: Array[_Common.FrameInfo]
 	var unique_frames_images: Array[Image]
@@ -42,7 +42,19 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	var pixel_layer_index: int
 	var image_rect: Rect2i = Rect2i(Vector2i.ZERO, image_size)
 	var frame: _Common.FrameInfo
+
+
+	var is_animation_default: bool = pxo_project.tags.is_empty()
+	if is_animation_default:
+		var default_animation_name: String = options[_Options.DEFAULT_ANIMATION_NAME].strip_edges()
+		if default_animation_name.is_empty():
+			default_animation_name = "default"
+		pxo_project.tags.push_back({
+			name = default_animation_name,
+			from = 1,
+			to = pxo_project.frames.size()})
 	var animations_count: int = pxo_project.tags.size()
+
 	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	animation_library.animations.resize(animations_count)
 	var pxo_cel_opacity: float
@@ -52,23 +64,34 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		var animation: _Common.AnimationInfo = _Common.AnimationInfo.new()
 		animation_library.animations[animation_index] = animation
 		var animation_frames_count: int = pxo_tag.to + 1 - pxo_tag.from
-		var animation_params_parsing_result: AnimationParamsParsingResult = _parse_animation_params(
-			pxo_tag.name, AnimationOptions.Direction | AnimationOptions.RepeatCount,
-			pxo_tag.from, animation_frames_count)
-		if animation_params_parsing_result.error:
-			result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters",
-				animation_params_parsing_result)
-			return result
-		if unique_animations_names.has(animation_params_parsing_result.name):
-			result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %
-				[animation_params_parsing_result.name, animation_index])
-			return result
-		unique_animations_names.push_back(animation_params_parsing_result.name)
-		animation.name = animation_params_parsing_result.name
-		if animation.name == autoplay_animation_name:
-			animation_library.autoplay_index = animation_index
-		animation.direction = animation_params_parsing_result.direction
-		animation.repeat_count = animation_params_parsing_result.repeat_count
+		if is_animation_default:
+			animation.name = pxo_tag.name
+			if animation.name == autoplay_animation_name:
+				animation_library.autoplay_index = animation_index
+			animation.direction = options[_Options.DEFAULT_ANIMATION_DIRECTION]
+			animation.repeat_count = options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT]
+		else:
+			var animation_params_parsing_result: AnimationParamsParsingResult = _parse_animation_params(
+				pxo_tag.name, AnimationOptions.Direction | AnimationOptions.RepeatCount,
+				pxo_tag.from, animation_frames_count)
+			if animation_params_parsing_result.error:
+				result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters",
+					animation_params_parsing_result)
+				return result
+			if unique_animations_names.has(animation_params_parsing_result.name):
+				result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %
+					[animation_params_parsing_result.name, animation_index])
+				return result
+			unique_animations_names.push_back(animation_params_parsing_result.name)
+			animation.name = animation_params_parsing_result.name
+			if animation.name == autoplay_animation_name:
+				animation_library.autoplay_index = animation_index
+			animation.direction = animation_params_parsing_result.direction
+			if animation.direction < 0:
+				animation.direction = _Common.AnimationDirection.FORWARD
+			animation.repeat_count = animation_params_parsing_result.repeat_count
+			if animation.repeat_count < 0:
+				animation.repeat_count = 1
 
 		animation.frames.resize(animation_frames_count)
 

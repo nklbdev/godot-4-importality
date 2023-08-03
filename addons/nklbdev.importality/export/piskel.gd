@@ -104,7 +104,11 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		if animation.name == autoplay_animation_name:
 			animation_library.autoplay_index = animation_index
 		animation.direction = animation_params_parsing_result.direction
+		if animation.direction < 0:
+			animation.direction = _Common.AnimationDirection.FORWARD
 		animation.repeat_count = animation_params_parsing_result.repeat_count
+		if animation.repeat_count < 0:
+			animation.repeat_count = 1
 		for animation_frame_index in animation_params_parsing_result.frames_count:
 			var global_frame_index: int = animation_params_parsing_result.first_frame_index + animation_frame_index
 			var frame: _Common.FrameInfo = all_frames[global_frame_index]
