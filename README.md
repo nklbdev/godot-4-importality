@@ -33,6 +33,7 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 - Several artifacts avoiding methods on the edges of sprites.
 - Grid-based and packaged layout options for sprite sheets.
 - Several node animation strategies with `AnimationPlayer`.
+- Importing any other graphics formats as regular images with external command line utilities.
 
 ## 💽 How to install
 
@@ -51,6 +52,7 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 - [Pencil2D](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-pencil_2d-(en)) (Important)
 - [Piskel](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-piskel-(en)) (No integration with the application. The plugin uses its own source file parser)
 - [Pixelorama](https://github.com/nklbdev/godot-4-importality/wiki/exporting-data-from-pixelorama-(en)) (No integration with the application. The plugin uses its own source file parser)
+- [Other graphics formats](https://github.com/nklbdev/godot-4-importality/wiki/importing-as-regular-images-(en)) (Important)
 
 Then:
 
