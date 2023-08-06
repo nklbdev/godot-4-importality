@@ -20,13 +20,9 @@ enum AtlasResourceType {
 	SEPARATED_IMAGE = 2,
 }
 
-var _common_temporary_files_directory_path_project_setting: _ProjectSetting = _ProjectSetting.new(
-	"temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
-	"", true, func(v: String): return v.is_empty())
-
 var __name: String
 var __recognized_extensions: PackedStringArray
-var __project_settings: Array[_ProjectSetting] = [_common_temporary_files_directory_path_project_setting]
+var __project_settings: Array[_ProjectSetting] = [_Common.common_temporary_files_directory_path_project_setting]
 var __editor_file_system: EditorFileSystem
 var __options: Array[Dictionary] = [
 	_Options.create_option(_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD, _Common.EdgesArtifactsAvoidanceMethod.NONE,

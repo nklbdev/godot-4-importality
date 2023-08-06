@@ -46,7 +46,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		result.fail(ERR_UNCONFIGURED, "Unable to get Krita Command Arguments to export spritesheet", os_command_arguments_result)
 		return result
 
-	var temp_dir_path_result: _ProjectSetting.Result = _common_temporary_files_directory_path_project_setting.get_value()
+	var temp_dir_path_result: _ProjectSetting.Result = _Common.common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result

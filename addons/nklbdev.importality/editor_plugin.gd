@@ -21,6 +21,11 @@ const IMPORTERS_SCRIPTS: Array[GDScript] = [
 	preload("import/sprite_sheet.gd"),
 ]
 
+const StandaloneImageFormatLoaderExtension = preload("standalone_image_format_loader_extension.gd")
+const STANDALONE_IMAGE_FORMAT_LOADER_EXTENSIONS: Array[GDScript] = [
+	preload("command_line_image_format_loader_extension.gd")
+]
+
 const CombinedEditorImportPlugin = preload("combined_editor_import_plugin.gd")
 
 var __editor_import_plugins: Array[EditorImportPlugin]
@@ -48,6 +53,13 @@ func _enter_tree() -> void:
 				CombinedEditorImportPlugin.new(exporter, importer)
 			__editor_import_plugins.push_back(editor_import_plugin)
 			add_import_plugin(editor_import_plugin)
+	for Extension in STANDALONE_IMAGE_FORMAT_LOADER_EXTENSIONS:
+		var image_format_loader_extension: StandaloneImageFormatLoaderExtension = \
+			Extension.new() as StandaloneImageFormatLoaderExtension
+		for setting in image_format_loader_extension.get_project_settings():
+			setting.register()
+		__image_format_loader_extensions.push_back(image_format_loader_extension)
+		image_format_loader_extension.add_format_loader()
 
 func _exit_tree() -> void:
 	for editor_import_plugin in __editor_import_plugins:
