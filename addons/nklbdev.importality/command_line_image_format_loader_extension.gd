@@ -91,7 +91,7 @@ func _load_image(
 		push_error("Unable to find command template for file extension: " + extension)
 		return ERR_UNCONFIGURED
 
-	var command_template_parts: PackedStringArray = split_words_with_quotes(command_template)
+	var command_template_parts: PackedStringArray = _Common.split_words_with_quotes(command_template)
 	if command_template_parts.is_empty():
 		push_error("Unable to recognize command template parts for extension: %s" % [extension])
 		return ERR_UNCONFIGURED
@@ -127,8 +127,11 @@ func _load_image(
 	if exit_code:
 		for arg_index in arguments.size():
 			arguments[arg_index] = "\nArgument: " + arguments[arg_index]
-		push_error("An error occurred while executing the OS command. Process exited with code %s:\nCommand: %s%s" %
-			[exit_code, command, "".join(arguments)])
+		push_error(" ".join([
+			"An error occurred while executing",
+			"the external image converting utility command.",
+			"Process exited with code %s:\nCommand: %s%s"
+			]) % [exit_code, command, "".join(arguments)])
 		return ERR_QUERY_FAILED
 
 	if not FileAccess.file_exists(global_output_path):
@@ -146,58 +149,3 @@ func _load_image(
 
 	return OK
 
-const backslash: String = "\\"
-const quote: String = "\""
-const space: String = " "
-const tab: String = "\t"
-const empty: String = ""
-static func split_words_with_quotes(source: String) -> PackedStringArray:
-	var parts: PackedStringArray
-	if source.is_empty():
-		return parts
-
-	var quotation: bool
-
-	var previous: String
-	var current: String
-	var next: String = source[0]
-	var chars_count = source.length()
-
-	var part: String
-	for char_idx in chars_count:
-		previous = current
-		current = next
-		next = source[char_idx + 1] if char_idx < chars_count - 1 else ""
-		if quotation:
-			# seek for quotation end
-			if previous != backslash and current == quote:
-				if next == space or next == tab or next == empty:
-					quotation = false
-					parts.push_back(part)
-					part = ""
-					continue
-				else:
-					push_error("Invalid quotation start at %s:\n%s\n%s" % [char_idx, source, " ".repeat(char_idx) + "^"])
-					return PackedStringArray()
-		else:
-			# seek for quotation start
-			if current == space or current == tab:
-				if not part.is_empty():
-					parts.push_back(part)
-					part = ""
-				continue
-			else:
-				if previous != backslash and current == quote:
-					if previous == space or previous == tab or previous == empty:
-						quotation = true
-						continue
-					else:
-						push_error("Invalid quotation end at %s:\n%s\n%s" % [char_idx, source, " ".repeat(char_idx) + "^"])
-						return PackedStringArray()
-		part += current
-	if quotation:
-		push_error("Invalid quotation end at %s:\n%s\n%s" % [chars_count - 1, source, " ".repeat(chars_count - 1) + "^"])
-		return PackedStringArray()
-	if not part.is_empty():
-		parts.push_back(part)
-	return parts

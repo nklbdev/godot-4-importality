@@ -35,6 +35,7 @@ func __validate_image_name(image_name: String) -> _Common.Result:
 
 func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
+	var err: Error
 
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 	if os_command_result.error:
@@ -50,6 +51,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
+	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
 
 	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
 
@@ -104,8 +106,6 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	var last_animations_frame_index: int = -1
 	var png_base_name: String = "img"
 	var global_temp_kra_path: String
-	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
-	DirAccess.make_dir_recursive_absolute(temp_dir_path_result.value)
 
 	var storyboard_index_file_name: String = "%s/storyboard/index.xml" % image_name
 	if storyboard_index_file_name in files_names_in_zip:
@@ -180,25 +180,31 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 
 	zip_reader.close()
 
-	# Создать пользователя (например, KritaRunner) с паролем 111 с помощью Win+R -> netplwiz
-	# Запустить Krita из-под этого пользователя с помощью утилиты PsExec
-	# "C:\Program Files\WindowsApps\Microsoft.SysinternalsSuite_2023.6.0.0_x64__8wekyb3d8bbwe\Tools\PsExec.exe"
-	# -u DEV-STATION\KritaRunner -p 111
-	# "C:\Program Files\Krita (x64)\bin\krita.exe"
-	# --export-sequence
-	# --export-filename "R:\Temp\Godot\Krita Importers\img.png"
-	# "D:\Godot 4.1\brave-mouse\project\tst2.kra"
+	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
+		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
+		if err:
+			result.fail(ERR_QUERY_FAILED, "Unable to create directory temporary files \"%s\" with error %s \"%s\"" %
+				[global_temp_dir_path, err, error_string(err)])
+			return result
+	var global_temp_png_path: String = global_temp_dir_path.path_join("temp.png")
 
-	var output: Array
-	var exit_code: int = OS.execute(
-		os_command_result.value,
-		os_command_arguments_result.value + PackedStringArray([
+	var command: String = os_command_result.value.strip_edges()
+	var arguments: PackedStringArray = \
+		os_command_arguments_result.value + \
+		PackedStringArray([
 			"--export-sequence",
 			"--export-filename", global_temp_png_path,
-			global_temp_kra_path]),
-		output, true, false)
+			global_temp_kra_path])
+
+	var output: Array
+	var exit_code: int = OS.execute(command, arguments, output, true, false)
 	if exit_code:
-		result.fail(ERR_QUERY_FAILED, "An error occurred while executing the Krita command. Process exited with code %s" % [exit_code])
+		for arg_index in arguments.size():
+			arguments[arg_index] = "\nArgument: " + arguments[arg_index]
+		result.fail(ERR_QUERY_FAILED, " ".join([
+			"An error occurred while executing the Krita command.",
+			"Process exited with code %s:\nCommand: %s%s"
+			]) % [exit_code, command, "".join(arguments)])
 		return result
 
 	if global_temp_kra_path != global_source_file_path:

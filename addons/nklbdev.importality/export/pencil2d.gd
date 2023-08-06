@@ -28,6 +28,7 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 
 func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
+	var err: Error
 
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 	if os_command_result.error:
@@ -93,27 +94,34 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	# --end <frame> The last frame you want to include in the exported movie. Can also be last or last-sound to automatically use the last frame containing animation or sound respectively
 	# --transparency Render transparency when possible
 	# input Path to input pencil file
-	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value)
+	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
 	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
-		var make_dir_error: Error = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
-		if make_dir_error:
-			result.fail(ERR_FILE_CANT_WRITE, "An error occured while make temp directory \"%s\": %s \"%s\"" %
-				[temp_dir_path_result.value, make_dir_error, error_string(make_dir_error)])
-	var png_base_name: String = "img"
+		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
+		if err:
+			result.fail(ERR_UNCONFIGURED, "Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+				[global_temp_dir_path, err, error_string(err)])
+	var png_base_name: String = "temp"
 	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
 
-	var output: Array
-	var exit_code: int = OS.execute(
-		os_command_result.value,
-		os_command_arguments_result.value + PackedStringArray([
+	var command: String = os_command_result.value.strip_edges()
+	var arguments: PackedStringArray = \
+		os_command_arguments_result.value + \
+		PackedStringArray([
 			"--export", global_temp_png_path,
 			"--start", 1,
 			"--end", unique_frames_count,
 			"--transparency",
-			global_source_file_path]),
-		output, true, false)
+			global_source_file_path])
+
+	var output: Array
+	var exit_code: int = OS.execute(command, arguments, output, true, false)
 	if exit_code:
-		result.fail(ERR_QUERY_FAILED, "An error occurred while executing the Pencil2D command. Process exited with code %s" % [exit_code])
+		for arg_index in arguments.size():
+			arguments[arg_index] = "\nArgument: " + arguments[arg_index]
+		result.fail(ERR_QUERY_FAILED, " ".join([
+			"An error occurred while executing the Pencil2D command.",
+			"Process exited with code %s:\nCommand: %s%s"
+			]) % [exit_code, command, "".join(arguments)])
 		return result
 
 	var frames_images: Array[Image]
@@ -213,28 +221,36 @@ class CustomImageFormatLoaderExtension:
 			return temp_dir_path_result.error
 
 		var global_source_file_path: String = ProjectSettings.globalize_path(file_access.get_path())
-		var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value)
+		var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
 		if not DirAccess.dir_exists_absolute(global_temp_dir_path):
 			err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
 			if err:
-				push_error("An error occured while make temp directory: %s" % [temp_dir_path_result.value])
-				return err
+				push_error("Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+					[global_temp_dir_path, err, error_string(err)])
+				return ERR_QUERY_FAILED
 		var png_base_name: String = "img"
 		var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
 
-		var output: Array
-		err = OS.execute(
-			os_command_result.value,
-			os_command_arguments_result.value + PackedStringArray([
+		var command: String = os_command_result.value.strip_edges()
+		var arguments: PackedStringArray = \
+			os_command_arguments_result.value + \
+			PackedStringArray([
 				"--export", global_temp_png_path,
 				"--start", 1,
 				"--end", 1,
 				"--transparency",
-				global_source_file_path]),
-			output, true, false)
-		if err:
-			push_error("An error occurred while executing the Pencil2D command")
-			return err
+				global_source_file_path])
+
+		var output: Array
+		var exit_code: int = OS.execute(command, arguments, output, true, false)
+		if exit_code:
+			for arg_index in arguments.size():
+				arguments[arg_index] = "\nArgument: " + arguments[arg_index]
+			push_error(" ".join([
+				"An error occurred while executing the Pencil2D command.",
+				"Process exited with code %s:\nCommand: %s%s"
+				]) % [exit_code, command, "".join(arguments)])
+			return ERR_QUERY_FAILED
 
 		var global_frame_png_path: String = temp_dir_path_result.value \
 			.path_join("%s0001.png" % [png_base_name])

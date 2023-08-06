@@ -26,6 +26,7 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 
 func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
 	var result: _Common.ExportResult = _Common.ExportResult.new()
+	var err: Error
 
 	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 	if os_command_result.error:
@@ -41,30 +42,44 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
+	var global_temp_dir_path: String = ProjectSettings.globalize_path(
+		temp_dir_path_result.value.strip_edges())
 
-	var png_path: String = temp_dir_path_result.value.path_join("temp.png")
-	var global_png_path: String = ProjectSettings.globalize_path(png_path)
-	var json_path: String = temp_dir_path_result.value.path_join("temp.json")
-	var global_json_path: String = ProjectSettings.globalize_path(json_path)
+	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
+		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
+		if err:
+			result.fail(ERR_UNCONFIGURED, "Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+				[global_temp_dir_path, err, error_string(err)])
+			return result
 
-	var output: Array = []
-	var exit_code: int = OS.execute(
-		os_command_result.value,
-		os_command_arguments_result.value + PackedStringArray([
+	var global_png_path: String = global_temp_dir_path.path_join("temp.png")
+	var global_json_path: String = global_temp_dir_path.path_join("temp.json")
+
+	var command: String = os_command_result.value.strip_edges()
+	var arguments: PackedStringArray = \
+		os_command_arguments_result.value + \
+		PackedStringArray([
 			"--batch",
 			"--format", "json-array",
 			"--list-tags",
 			"--sheet", global_png_path,
 			"--data", global_json_path,
-			ProjectSettings.globalize_path(res_source_file_path)]),
-		output, true, false)
+			ProjectSettings.globalize_path(res_source_file_path)])
+
+	var output: Array = []
+	var exit_code: int = OS.execute(command, arguments, output, true, false)
 	if exit_code:
-		result.fail(ERR_QUERY_FAILED, "An error occurred while executing the Aseprite command. Process exited with code %s" % [exit_code])
+		for arg_index in arguments.size():
+			arguments[arg_index] = "\nArgument: " + arguments[arg_index]
+		result.fail(ERR_QUERY_FAILED, " ".join([
+			"An error occurred while executing the Aseprite command.",
+			"Process exited with code %s:\nCommand: %s%s"
+			]) % [exit_code, command, "".join(arguments)])
 		return result
 	var raw_atlas_image: Image = Image.load_from_file(global_png_path)
 	DirAccess.remove_absolute(global_png_path)
 	var json = JSON.new()
-	var err: Error = json.parse(FileAccess.get_file_as_string(global_json_path))
+	err = json.parse(FileAccess.get_file_as_string(global_json_path))
 	if err:
 		result.fail(ERR_INVALID_DATA, "Unable to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
 		return result
@@ -205,6 +220,7 @@ class CustomImageFormatLoaderExtension:
 
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
 		var global_source_file_path: String = file_access.get_path_absolute()
+		var err: Error
 
 		var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
 		if os_command_result.error:
@@ -220,30 +236,44 @@ class CustomImageFormatLoaderExtension:
 		if temp_dir_path_result.error:
 			push_error(temp_dir_path_result.error_description)
 			return temp_dir_path_result.error
+		var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
 
-		var png_path: String = temp_dir_path_result.value.path_join("temp.png")
-		var global_png_path: String = ProjectSettings.globalize_path(png_path)
-		var json_path: String = temp_dir_path_result.value.path_join("temp.json")
-		var global_json_path: String = ProjectSettings.globalize_path(json_path)
+		var global_png_path: String = global_temp_dir_path.path_join("temp.png")
+		var global_json_path: String = global_temp_dir_path.path_join("temp.json")
+		if not DirAccess.dir_exists_absolute(global_temp_dir_path):
+			err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
+			if err:
+				push_error("Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+					[global_temp_dir_path, err, error_string(err)])
+				return ERR_QUERY_FAILED
 
-		var output: Array = []
-		var exit_code: int = OS.execute(
-			os_command_result.value,
-			os_command_arguments_result.value + PackedStringArray([
+		var command: String = os_command_result.value.strip_edges()
+		var arguments: PackedStringArray = \
+			os_command_arguments_result.value + \
+			PackedStringArray([
 				"--batch",
 				"--format", "json-array",
 				"--list-tags",
 				"--sheet", global_png_path,
 				"--data", global_json_path,
-				global_source_file_path]),
-			output, true, false)
+				global_source_file_path,
+			])
+
+		var output: Array = []
+		var exit_code: int = OS.execute(command, arguments, output, true, false)
 		if exit_code:
-			push_error("An error occurred while executing the Aseprite command. Process exited with code %s" % [exit_code])
+			for arg_index in arguments.size():
+				arguments[arg_index] = "\nArgument: " + arguments[arg_index]
+			push_error(" ".join([
+				"An error occurred while executing the Aseprite command.",
+				"Process exited with code %s:\nCommand: %s%s"
+				]) % [exit_code, command, "".join(arguments)])
 			return ERR_QUERY_FAILED
+
 		var raw_atlas_image: Image = Image.load_from_file(global_png_path)
 		DirAccess.remove_absolute(global_png_path)
 		var json = JSON.new()
-		var err: Error = json.parse(FileAccess.get_file_as_string(global_json_path))
+		err = json.parse(FileAccess.get_file_as_string(global_json_path))
 		if err:
 			push_error("Unable to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
 			return ERR_INVALID_DATA
