@@ -3,8 +3,7 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](README.md)
 [![en](https://img.shields.io/badge/lang-ru-green.svg)](README.ru.md)
 
-![all_in_one](https://github.com/nklbdev/godot-4-importality/assets/7024016/c3b866ec-b892-45a1-a73e-03e3af86d96b)
-![icon](https://github.com/nklbdev/godot-4-importality/assets/7024016/978a36e8-61e0-406e-8a35-b872eff51be0)
+![art for repo 2](https://github.com/nklbdev/godot-4-importality/assets/7024016/f44d98b1-116c-493e-8108-2138b1bddd61)
 
 **Importality - это дополнение (addon) для движка [Godot](https://godotengine.org) для импорта графики и анимации из популярных форматов.**
 
@@ -19,6 +18,12 @@
 ## 📝 Вступление
 
 Ранее я уже публиковал [дополнение для импорта файлов Aseprite](https://github.com/nklbdev/godot-4-aseprite-importers). После него я начал разработку аналогичного дополнения для импорта файлов Krita. В процессе разработки у этих проектов оказалось много общего, и я решил объединить их в один. Importality содержит скрипты экспорта данных из исходных файлов в общий внутренний формат, и скрипты импорта из внутреннего формата в ресурсы Godot. После этого было решено добавить новые скрипты экспорта для других графических приложений.
+
+<p align="center">
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=tlfhlQPr_IA" target="_blank">
+<img src="http://img.youtube.com/vi/tlfhlQPr_IA/mqdefault.jpg" alt="Watch the demo video" width="960" height="720" border="10" />
+</a>
+</p>
 
 ## 🎯 Возможности
 
