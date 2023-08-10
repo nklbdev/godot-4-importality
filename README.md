@@ -21,7 +21,7 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 
 <p align="center">
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=tlfhlQPr_IA" target="_blank">
-<img src="http://img.youtube.com/vi/tlfhlQPr_IA/mqdefault.jpg" alt="Watch the demo video" width="960" height="720" border="10" />
+<img src="http://img.youtube.com/vi/tlfhlQPr_IA/hqdefault.jpg" alt="Watch the demo video" width="960" height="640" border="10" />
 </a>
 </p>
 
