@@ -83,7 +83,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	if err:
 		result.fail(ERR_INVALID_DATA, "Unable to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
 		return result
-	#DirAccess.remove_absolute(global_json_path)
+	DirAccess.remove_absolute(global_json_path)
 	var raw_sprite_sheet_data: Dictionary = json.data
 
 	var sprite_sheet_layout: _Common.SpriteSheetLayout = options[_Options.SPRITE_SHEET_LAYOUT]
