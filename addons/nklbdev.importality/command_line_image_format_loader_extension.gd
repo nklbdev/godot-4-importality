@@ -7,7 +7,7 @@ static var command_building_rules_for_custom_image_loader_project_setting: _Proj
 	"command_building_rules_for_custom_image_loader", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE)
 
 func _get_recognized_extensions() -> PackedStringArray:
-	var rules_by_extensions_result: _ProjectSetting.Result = command_building_rules_for_custom_image_loader_project_setting.get_value()
+	var rules_by_extensions_result: _ProjectSetting.GettingValueResult = command_building_rules_for_custom_image_loader_project_setting.get_value()
 	if rules_by_extensions_result.error:
 		push_error("Unable to get command building rules for custom image loader project setting")
 		return PackedStringArray()
@@ -58,12 +58,12 @@ func _load_image(
 	scale: float
 	) -> Error:
 
-	var temp_dir_path_result: _ProjectSetting.Result = _Common.common_temporary_files_directory_path_project_setting.get_value()
+	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
 		push_error("Unable to get Temporary Files Directory Path to export image from source file: %s" % [temp_dir_path_result])
 		return ERR_UNCONFIGURED
 
-	var rules_by_extensions_result: _ProjectSetting.Result = command_building_rules_for_custom_image_loader_project_setting.get_value()
+	var rules_by_extensions_result: _ProjectSetting.GettingValueResult = command_building_rules_for_custom_image_loader_project_setting.get_value()
 	if rules_by_extensions_result.error:
 		push_error("Unable to get command building rules for custom image loader project setting")
 		return ERR_UNCONFIGURED

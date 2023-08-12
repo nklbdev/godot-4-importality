@@ -17,8 +17,8 @@ func import(
 	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
 	save_path: String
-	) -> _Common.ImportResult:
-	var result: _Common.ImportResult = _Common.ImportResult.new()
+	) -> ImportResult:
+	var result: ImportResult = ImportResult.new()
 
 	var unique_indixes_by_sprites: Dictionary
 	var unique_sprite_index: int = 0

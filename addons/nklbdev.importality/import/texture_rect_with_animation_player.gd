@@ -22,8 +22,8 @@ func import(
 	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
 	save_path: String
-	) -> _Common.ImportResult:
-	var result: _Common.ImportResult = _Common.ImportResult.new()
+	) -> ImportResult:
+	var result: ImportResult = ImportResult.new()
 
 	var texture_rect: TextureRect = TextureRect.new()
 	var node_name: String = options[_Options.ROOT_NODE_NAME].strip_edges()

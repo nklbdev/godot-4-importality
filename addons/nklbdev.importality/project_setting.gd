@@ -1,7 +1,7 @@
 @tool
 extends RefCounted
 
-const _Common = preload("common.gd")
+const _Result = preload("result.gd").Class
 
 var __name: StringName
 var __initial_value: Variant
@@ -44,15 +44,15 @@ func register() -> void:
 		property_info["hint_string"] = __hint_string
 	ProjectSettings.add_property_info(property_info)
 
-class Result:
-	extends _Common.Result
+class GettingValueResult:
+	extends _Result
 	var value: Variant
 	func success(value: Variant) -> void:
 		_success()
 		self.value = value
 
-func get_value() -> Result:
-	var result = Result.new()
+func get_value() -> GettingValueResult:
+	var result = GettingValueResult.new()
 	var value = ProjectSettings.get_setting(__name)
 	if __is_required:
 		if __is_value_empty_func.call(value):

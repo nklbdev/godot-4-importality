@@ -41,12 +41,12 @@ func _import(
 	platform_variants: Array[String],
 	gen_files: Array[String]
 	) -> Error:
-	var export_result: _Common.ExportResult = \
+	var export_result: _Exporter.ExportResult = \
 		__exporter.export(source_file, options, self)
 	if export_result.error:
 		push_error("Export is failed. Errors chain:\n%s" % [export_result])
 		return export_result.error
-	var import_result: _Common.ImportResult = \
+	var import_result: _Importer.ImportResult = \
 		__importer.import(source_file, export_result.sprite_sheet, export_result.animation_library, options, save_path)
 	if import_result.error:
 		push_error("Import is failed. Errors chain:\n%s" % [import_result])

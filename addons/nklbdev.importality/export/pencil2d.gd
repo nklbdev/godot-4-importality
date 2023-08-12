@@ -26,21 +26,21 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 		__os_command_arguments_project_setting,
 		_Common.common_temporary_files_directory_path_project_setting))
 
-func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
-	var result: _Common.ExportResult = _Common.ExportResult.new()
+func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> ExportResult:
+	var result: ExportResult = ExportResult.new()
 	var err: Error
 
-	var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
+	var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
 	if os_command_result.error:
 		result.fail(ERR_UNCONFIGURED, "Unable to get Pencil2D Command to export spritesheet", os_command_result)
 		return result
 
-	var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
+	var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
 	if os_command_arguments_result.error:
 		result.fail(ERR_UNCONFIGURED, "Unable to get Pencil2D Command Arguments to export spritesheet", os_command_arguments_result)
 		return result
 
-	var temp_dir_path_result: _ProjectSetting.Result = _Common.common_temporary_files_directory_path_project_setting.get_value()
+	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
@@ -135,12 +135,12 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
 
-	var sprite_sheet_building_result: _SpriteSheetBuilderBase.Result = sprite_sheet_builder.build_sprite_sheet(frames_images)
+	var sprite_sheet_building_result: _SpriteSheetBuilderBase.SpriteSheetBuildingResult = sprite_sheet_builder.build_sprite_sheet(frames_images)
 	if sprite_sheet_building_result.error:
 		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
-	var atlas_making_result: AtlasMaker.Result = atlas_maker \
+	var atlas_making_result: AtlasMaker.AtlasMakingResult = atlas_maker \
 		.make_atlas(sprite_sheet_building_result.atlas_image)
 	if atlas_making_result.error:
 		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
@@ -205,17 +205,17 @@ class CustomImageFormatLoaderExtension:
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
 		var err: Error
 
-		var os_command_result: _ProjectSetting.Result = __os_command_project_setting.get_value()
+		var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
 		if os_command_result.error:
 			push_error(os_command_result.error_description)
 			return os_command_result.error
 
-		var os_command_arguments_result: _ProjectSetting.Result = __os_command_arguments_project_setting.get_value()
+		var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
 		if os_command_arguments_result.error:
 			push_error(os_command_arguments_result.error_description)
 			return os_command_arguments_result.error
 
-		var temp_dir_path_result: _ProjectSetting.Result = __common_temporary_files_directory_path_project_setting.get_value()
+		var temp_dir_path_result: _ProjectSetting.GettingValueResult = __common_temporary_files_directory_path_project_setting.get_value()
 		if temp_dir_path_result.error:
 			push_error(temp_dir_path_result.error_description)
 			return temp_dir_path_result.error

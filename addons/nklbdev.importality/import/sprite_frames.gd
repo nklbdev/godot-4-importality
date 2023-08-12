@@ -9,8 +9,8 @@ func import(
 	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
 	save_path: String
-	) -> _Common.ImportResult:
-	var result: _Common.ImportResult = _Common.ImportResult.new()
+	) -> ImportResult:
+	var result: ImportResult = ImportResult.new()
 
 	var sprite_frames: SpriteFrames = SpriteFrames.new()
 	for animation_name in sprite_frames.get_animation_names():

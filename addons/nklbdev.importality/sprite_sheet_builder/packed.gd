@@ -101,8 +101,8 @@ class SpriteSheetBuildingContext:
 		similar_images_props.push_back(image_props)
 		return image_props
 
-func build_sprite_sheet(images: Array[Image]) -> Result:
-	var result: Result = Result.new()
+func build_sprite_sheet(images: Array[Image]) -> SpriteSheetBuildingResult:
+	var result: SpriteSheetBuildingResult = SpriteSheetBuildingResult.new()
 	var images_count: int = images.size()
 
 	var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()
@@ -149,7 +149,7 @@ func build_sprite_sheet(images: Array[Image]) -> Result:
 			for atlas_region_index in atlas_regions_count:
 				atlas_regions_sizes[atlas_region_index] += Vector2i.ONE * 2
 
-	var packing_result: _RectPacker.Result = _RectPacker.pack(atlas_regions_sizes)
+	var packing_result: _RectPacker.RectPackingResult = _RectPacker.pack(atlas_regions_sizes)
 	if packing_result.error:
 		result.fail(ERR_BUG, "Rect packing failed", packing_result)
 		return result

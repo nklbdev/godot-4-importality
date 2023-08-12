@@ -1,6 +1,7 @@
 @tool
 extends RefCounted
 
+const _Result = preload("../result.gd").Class
 const _Common = preload("../common.gd")
 const _Options = preload("../options.gd")
 const _ProjectSetting = preload("../project_setting.gd")
@@ -19,6 +20,20 @@ enum AtlasResourceType {
 	EMBEDDED_IMAGE_TEXTURE = 1,
 	SEPARATED_IMAGE = 2,
 }
+
+class ExportResult:
+	extends _Result
+	var sprite_sheet: _Common.SpriteSheetInfo
+	var animation_library: _Common.AnimationLibraryInfo
+	func _get_result_type_description() -> String:
+		return "Export"
+	func success(
+		sprite_sheet: _Common.SpriteSheetInfo,
+		animation_library: _Common.AnimationLibraryInfo
+		) -> void:
+		_success()
+		self.sprite_sheet = sprite_sheet
+		self.animation_library = animation_library
 
 var __name: String
 var __recognized_extensions: PackedStringArray
@@ -86,8 +101,8 @@ func get_image_format_loader_extension() -> ImageFormatLoaderExtension:
 
 class AtlasMaker:
 	extends RefCounted
-	class Result:
-		extends _Common.Result
+	class AtlasMakingResult:
+		extends _Result
 		var atlas: Texture2D
 		func success(atlas: Texture2D) -> void:
 			super._success()
@@ -103,8 +118,8 @@ class AtlasMaker:
 		__editor_import_plugin = editor_import_plugin
 		__editor_file_system = editor_file_system
 		__png_path = res_source_file_path + ".png"
-	func make_atlas(atlas_image: Image) -> Result:
-		var result: Result = Result.new()
+	func make_atlas(atlas_image: Image) -> AtlasMakingResult:
+		var result: AtlasMakingResult = AtlasMakingResult.new()
 		atlas_image.save_png(__png_path)
 		__editor_file_system.update_file(__png_path)
 		var error: Error = __editor_import_plugin.append_import_external_resource(__png_path)
@@ -118,7 +133,7 @@ func export(
 	res_source_file_path: String,
 	options: Dictionary,
 	editor_import_plugin: EditorImportPlugin
-	) -> _Common.ExportResult:
+	) -> ExportResult:
 	return _export(
 		res_source_file_path,
 		AtlasMaker.new(
@@ -127,9 +142,9 @@ func export(
 			res_source_file_path),
 		options)
 
-func _export(source_file: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
+func _export(source_file: String, atlas_maker: AtlasMaker, options: Dictionary) -> ExportResult:
 	assert(false, "This method is abstract and must be overriden.")
-	var result: _Common.ExportResult = _Common.ExportResult.new()
+	var result: ExportResult = ExportResult.new()
 	result.fail(ERR_UNCONFIGURED)
 	return result
 
@@ -143,7 +158,7 @@ static var __option_regex: RegEx = RegEx.create_from_string("\\s-\\p{L}:\\s*\\S+
 static var __natural_number_regex: RegEx = RegEx.create_from_string("\\A\\d+\\z")
 
 class AnimationParamsParsingResult:
-	extends _Common.Result
+	extends _Result
 	var name: String
 	var first_frame_index: int
 	var frames_count: int

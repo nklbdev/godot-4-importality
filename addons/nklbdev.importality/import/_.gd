@@ -1,8 +1,23 @@
 @tool
 extends RefCounted
 
+const _Result = preload("../result.gd").Class
 const _Common = preload("../common.gd")
 const _Options = preload("../options.gd")
+
+class ImportResult:
+	extends _Result
+	var resource: Resource
+	var resource_saver_flags: ResourceSaver.SaverFlags
+	func _get_result_type_description() -> String:
+		return "Import"
+	func success(
+		resource: Resource,
+		resource_saver_flags: ResourceSaver.SaverFlags = ResourceSaver.FLAG_NONE
+		) -> void:
+		_success()
+		self.resource = resource
+		self.resource_saver_flags = resource_saver_flags
 
 var __options: Array[Dictionary] = [
 	_Options.create_option(_Options.DEFAULT_ANIMATION_NAME, "default",
@@ -47,9 +62,9 @@ func import(
 	sprite_sheet: _Common.SpriteSheetInfo,
 	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
-	save_path: String) -> _Common.ImportResult:
+	save_path: String) -> ImportResult:
 	assert(false, "This method is abstract and must be overriden.")
-	var result: _Common.ImportResult = _Common.ImportResult.new()
+	var result: ImportResult = ImportResult.new()
 	result.fail(ERR_UNCONFIGURED, "This method is abstract and must be overriden.")
 	return result
 

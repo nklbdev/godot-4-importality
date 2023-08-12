@@ -1,6 +1,7 @@
 @tool
 extends RefCounted
 
+const _Result = preload("../result.gd").Class
 const _Common = preload("../common.gd")
 
 var _edges_artifacts_avoidance_method: _Common.EdgesArtifactsAvoidanceMethod
@@ -13,8 +14,8 @@ func _init(
 	_edges_artifacts_avoidance_method = edges_artifacts_avoidance_method
 	_sprites_surrounding_color = sprites_surrounding_color
 
-class Result:
-	extends _Common.Result
+class SpriteSheetBuildingResult:
+	extends _Result
 	var sprite_sheet: _Common.SpriteSheetInfo
 	var atlas_image: Image
 	func _get_result_type_description() -> String:
@@ -24,7 +25,7 @@ class Result:
 		self.sprite_sheet = sprite_sheet
 		self.atlas_image = atlas_image
 
-func build_sprite_sheet(images: Array[Image]) -> Result:
+func build_sprite_sheet(images: Array[Image]) -> SpriteSheetBuildingResult:
 	assert(false, "This method is abstract and must be overriden.")
 	return null
 

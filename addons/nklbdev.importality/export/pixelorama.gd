@@ -14,8 +14,8 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 		# settings
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
-func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> _Common.ExportResult:
-	var result: _Common.ExportResult = _Common.ExportResult.new()
+func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> ExportResult:
+	var result: ExportResult = ExportResult.new()
 
 	var file: FileAccess = FileAccess.open_compressed(res_source_file_path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
 	if file == null or file.get_open_error() == ERR_FILE_UNRECOGNIZED:
@@ -149,13 +149,13 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
 
-	var sprite_sheet_building_result: _SpriteSheetBuilderBase.Result = \
+	var sprite_sheet_building_result: _SpriteSheetBuilderBase.SpriteSheetBuildingResult = \
 		sprite_sheet_builder.build_sprite_sheet(unique_frames_images)
 	if sprite_sheet_building_result.error:
 		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
-	var atlas_making_result: AtlasMaker.Result = atlas_maker \
+	var atlas_making_result: AtlasMaker.AtlasMakingResult = atlas_maker \
 		.make_atlas(sprite_sheet_building_result.atlas_image)
 	if atlas_making_result.error:
 		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)

@@ -30,8 +30,8 @@ func _init(
 	_collapse_transparent = collapse_transparent
 	_merge_duplicates = merge_duplicates
 
-func build_sprite_sheet(images: Array[Image]) -> Result:
-	var result: Result = Result.new()
+func build_sprite_sheet(images: Array[Image]) -> SpriteSheetBuildingResult:
+	var result: SpriteSheetBuildingResult = SpriteSheetBuildingResult.new()
 	var images_count: int = images.size()
 
 	var sprite_sheet: _Common.SpriteSheetInfo = _Common.SpriteSheetInfo.new()

@@ -15,10 +15,10 @@ func import(
 	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
 	save_path: String
-	) -> _Common.ImportResult:
-	var result: _Common.ImportResult = _Common.ImportResult.new()
+	) -> ImportResult:
+	var result: ImportResult = ImportResult.new()
 
-	var sprite_frames_import_result: _Common.ImportResult = __sprite_frames_importer \
+	var sprite_frames_import_result: ImportResult = __sprite_frames_importer \
 		.import(res_source_file_path, sprite_sheet, animation_library, options, save_path)
 	if sprite_frames_import_result.error:
 		return sprite_frames_import_result

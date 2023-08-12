@@ -3,13 +3,14 @@
 # Copyright (c) 2018 Brandon Semilla (MIT License) - original author
 # Copyright (c) 2023 Nikolay Lebedev (MIT License) - porting to gdscript, refactoring and optimization
 
+const _Result = preload("result.gd").Class
 const _Common = preload("common.gd")
 
 const __WHITESPACE_WEIGHT: float = 1
 const __SIDE_LENGTH_WEIGHT: float = 10
 
-class Result:
-	extends _Common.Result
+class RectPackingResult:
+	extends _Result
 	# Total size of the entire layout of rectangles.
 	var bounds: Vector2i
 	# Computed positions of the input rectangles
@@ -45,8 +46,8 @@ static func __has_intersection(rect: Rect2i, cache: Dictionary, cache_grid_size:
 	return false
 
 # The function takes an array of rectangle sizes as input and compactly packs them.
-static func pack(rects_sizes: Array[Vector2i]) -> Result:
-	var result: Result = Result.new()
+static func pack(rects_sizes: Array[Vector2i]) -> RectPackingResult:
+	var result: RectPackingResult = RectPackingResult.new()
 	var rects_count: int = rects_sizes.size()
 	if rects_count == 0:
 		result.success(Vector2i.ZERO, [])
