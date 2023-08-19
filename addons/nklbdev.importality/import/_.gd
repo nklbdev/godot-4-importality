@@ -59,6 +59,7 @@ func get_options() -> Array[Dictionary]:
 
 func import(
 	source_file_path: String,
+	atlas: Texture2D,
 	sprite_sheet: _Common.SpriteSheetInfo,
 	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
@@ -67,4 +68,3 @@ func import(
 	var result: ImportResult = ImportResult.new()
 	result.fail(ERR_UNCONFIGURED, "This method is abstract and must be overriden.")
 	return result
-

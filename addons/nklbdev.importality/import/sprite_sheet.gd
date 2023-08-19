@@ -13,6 +13,7 @@ func _init() -> void: super("Sprite sheet (JSON)", "JSON", "res", [
 
 func import(
 	res_source_file_path: String,
+	atlas: Texture2D,
 	sprite_sheet: _Common.SpriteSheetInfo,
 	animation_library: _Common.AnimationLibraryInfo,
 	options: Dictionary,
@@ -68,7 +69,7 @@ func import(
 	var json: JSON = JSON.new()
 	json.data = {
 		sprite_sheet = {
-			atlas = sprite_sheet.atlas,
+			atlas = atlas,
 			source_image_size = sprite_sheet.source_image_size,
 			sprites = sprites,
 		},

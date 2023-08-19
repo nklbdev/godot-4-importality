@@ -16,7 +16,7 @@ var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.ne
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["ase", "aseprite"]
-	super("Aseprite", recognized_extensions, [], editor_file_system,
+	super("Aseprite", recognized_extensions, [],
 		[__os_command_project_setting, __os_command_arguments_project_setting],
 		CustomImageFormatLoaderExtension.new(
 			recognized_extensions,
@@ -24,7 +24,7 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 			__os_command_arguments_project_setting,
 			_Common.common_temporary_files_directory_path_project_setting))
 
-func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> ExportResult:
+func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var result: ExportResult = ExportResult.new()
 	var err: Error
 
@@ -135,13 +135,6 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
 
-	var atlas_making_result: AtlasMaker.AtlasMakingResult = atlas_maker \
-		.make_atlas(sprite_sheet_building_result.atlas_image)
-	if atlas_making_result.error:
-		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
-		return result
-	sprite_sheet.atlas = atlas_making_result.atlas
-
 	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
 
@@ -193,7 +186,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
-	result.success(sprite_sheet, animation_library)
+	result.success(sprite_sheet_building_result.atlas_image, sprite_sheet, animation_library)
 	return result
 
 class CustomImageFormatLoaderExtension:

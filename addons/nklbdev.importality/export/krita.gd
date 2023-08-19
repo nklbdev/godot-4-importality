@@ -13,7 +13,7 @@ var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.ne
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["kra", "krita"]
-	super("Krita", recognized_extensions, [], editor_file_system, [
+	super("Krita", recognized_extensions, [], [
 		__os_command_project_setting,
 		__os_command_arguments_project_setting,
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
@@ -33,7 +33,7 @@ func __validate_image_name(image_name: String) -> _Result:
 		result.fail(ERR_FILE_BAD_PATH, "There are unsupported characters in Krita Document Title: \"%s\"" % ["".join(unsupported_characters)])
 	return result
 
-func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> ExportResult:
+func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var result: ExportResult = ExportResult.new()
 	var err: Error
 
@@ -104,8 +104,10 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	var total_animations_frames_count: int
 	var first_animations_frame_index: int = -1
 	var last_animations_frame_index: int = -1
-	var png_base_name: String = "img"
 	var global_temp_kra_path: String
+	var temp_file_base_name: String = "img"
+	var temp_kra_file_name: String = temp_file_base_name + ".kra"
+	var temp_png_file_name_pattern: String = temp_file_base_name + ".png"
 
 	var storyboard_index_file_name: String = "%s/storyboard/index.xml" % image_name
 	if storyboard_index_file_name in files_names_in_zip:
@@ -144,8 +146,6 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		animation_range_xml_element.attributes["from"] = str(first_animations_frame_index)
 		animation_range_xml_element.attributes["to"] = str(last_animations_frame_index)
 
-		var temp_kra_base_name: String = "img"
-		var temp_kra_file_name: String = temp_kra_base_name + ".kra"
 		global_temp_kra_path = temp_dir_path_result.value.path_join(temp_kra_file_name)
 
 		animation_index_animation_metadata_range_xml_element.attributes["from"] = str(first_animations_frame_index)
@@ -186,14 +186,14 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 			result.fail(ERR_QUERY_FAILED, "Unable to create directory temporary files \"%s\" with error %s \"%s\"" %
 				[global_temp_dir_path, err, error_string(err)])
 			return result
-	var global_temp_png_path: String = global_temp_dir_path.path_join("temp.png")
+	var global_temp_png_path_pattern: String = global_temp_dir_path.path_join(temp_png_file_name_pattern)
 
 	var command: String = os_command_result.value.strip_edges()
 	var arguments: PackedStringArray = \
 		os_command_arguments_result.value + \
 		PackedStringArray([
 			"--export-sequence",
-			"--export-filename", global_temp_png_path,
+			"--export-filename", global_temp_png_path_pattern,
 			global_temp_kra_path])
 
 	var output: Array
@@ -215,7 +215,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	var frames_images: Array[Image]
 	for image_idx in unique_frames_count:
 		var global_frame_png_path: String = temp_dir_path_result.value \
-			.path_join("%s%04d.png" % [png_base_name, image_idx])
+			.path_join("%s%04d.png" % [temp_file_base_name, image_idx])
 		if FileAccess.file_exists(global_frame_png_path):
 			var image: Image = Image.load_from_file(global_frame_png_path)
 			frames_images.push_back(image)
@@ -230,13 +230,6 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
-
-	var atlas_making_result: AtlasMaker.AtlasMakingResult = atlas_maker \
-		.make_atlas(sprite_sheet_building_result.atlas_image)
-	if atlas_making_result.error:
-		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
-		return result
-	sprite_sheet.atlas = atlas_making_result.atlas
 
 	var animation_library: _Common.AnimationLibraryInfo = _Common.AnimationLibraryInfo.new()
 	var autoplay_animation_name: String = options[_Options.AUTOPLAY_ANIMATION_NAME].strip_edges()
@@ -270,7 +263,7 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
-	result.success(sprite_sheet, animation_library)
+	result.success(sprite_sheet_building_result.atlas_image, sprite_sheet, animation_library)
 	return result
 
 class CustomImageFormatLoaderExtension:

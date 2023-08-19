@@ -48,7 +48,6 @@ class SpriteInfo:
 
 class SpriteSheetInfo:
 	extends RefCounted
-	var atlas: Texture2D
 	var source_image_size: Vector2i
 	var sprites: Array[SpriteInfo]
 

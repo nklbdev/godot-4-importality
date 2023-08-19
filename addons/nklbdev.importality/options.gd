@@ -18,6 +18,7 @@ const ROOT_NODE_NAME: StringName = "root_node_name"
 const ANIMATION_STRATEGY: StringName = "animation/strategy"
 const SPRITE_CENTERED: StringName = "sprite/centered"
 const ATLAS_TEXTURES_REGION_FILTER_CLIP_ENABLED: StringName = "atlas_textures/region_filter_clip_enabled"
+const MIDDLE_IMPORT_SCRIPT_PATH: StringName = "middle_import_script"
 
 static func create_option(
 	name: StringName,

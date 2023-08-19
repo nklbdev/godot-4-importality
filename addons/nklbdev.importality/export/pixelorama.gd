@@ -10,11 +10,11 @@ enum PxoLayerType {
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["pxo"]
 	super("Pixelorama", recognized_extensions, [
-	], editor_file_system, [
+	], [
 		# settings
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
-func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dictionary) -> ExportResult:
+func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var result: ExportResult = ExportResult.new()
 
 	var file: FileAccess = FileAccess.open_compressed(res_source_file_path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
@@ -155,18 +155,12 @@ func _export(res_source_file_path: String, atlas_maker: AtlasMaker, options: Dic
 		result.fail(ERR_BUG, "Sprite sheet building failed", sprite_sheet_building_result)
 		return result
 	var sprite_sheet: _Common.SpriteSheetInfo = sprite_sheet_building_result.sprite_sheet
-	var atlas_making_result: AtlasMaker.AtlasMakingResult = atlas_maker \
-		.make_atlas(sprite_sheet_building_result.atlas_image)
-	if atlas_making_result.error:
-		result.fail(ERR_SCRIPT_FAILED, "Unable to make atlas texture from image", atlas_making_result)
-		return result
-	sprite_sheet.atlas = atlas_making_result.atlas
 
 	for unique_frame_index in unique_frames_count:
 		var unique_frame: _Common.FrameInfo = unique_frames[unique_frame_index]
 		unique_frame.sprite = sprite_sheet.sprites[unique_frame_index]
 
-	result.success(sprite_sheet, animation_library)
+	result.success(sprite_sheet_building_result.atlas_image, sprite_sheet, animation_library)
 	return result
 
 class CustomImageFormatLoaderExtension:

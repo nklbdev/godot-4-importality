@@ -23,22 +23,24 @@ enum AtlasResourceType {
 
 class ExportResult:
 	extends _Result
+	var atlas_image: Image
 	var sprite_sheet: _Common.SpriteSheetInfo
 	var animation_library: _Common.AnimationLibraryInfo
 	func _get_result_type_description() -> String:
 		return "Export"
 	func success(
+		atlas_image: Image,
 		sprite_sheet: _Common.SpriteSheetInfo,
 		animation_library: _Common.AnimationLibraryInfo
 		) -> void:
 		_success()
+		self.atlas_image = atlas_image
 		self.sprite_sheet = sprite_sheet
 		self.animation_library = animation_library
 
 var __name: String
 var __recognized_extensions: PackedStringArray
 var __project_settings: Array[_ProjectSetting] = [_Common.common_temporary_files_directory_path_project_setting]
-var __editor_file_system: EditorFileSystem
 var __options: Array[Dictionary] = [
 	_Options.create_option(_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD, _Common.EdgesArtifactsAvoidanceMethod.NONE,
 		PROPERTY_HINT_ENUM, ",".join(_Common.EDGES_ARTIFACTS_AVOIDANCE_METHODS_NAMES),
@@ -73,14 +75,12 @@ func _init(
 	name: String,
 	recognized_extensions: PackedStringArray,
 	options: Array[Dictionary],
-	editor_file_system: EditorFileSystem,
 	project_settings: Array[_ProjectSetting],
 	image_format_loader_extension: ImageFormatLoaderExtension = null
 	) -> void:
 	__name = name
 	__recognized_extensions = recognized_extensions
 	__options.append_array(options)
-	__editor_file_system = editor_file_system
 	__project_settings.append_array(project_settings)
 	__image_format_loader_extension = image_format_loader_extension
 
@@ -99,36 +99,6 @@ func get_project_settings() -> Array[_ProjectSetting]:
 func get_image_format_loader_extension() -> ImageFormatLoaderExtension:
 	return __image_format_loader_extension
 
-class AtlasMaker:
-	extends RefCounted
-	class AtlasMakingResult:
-		extends _Result
-		var atlas: Texture2D
-		func success(atlas: Texture2D) -> void:
-			super._success()
-			self.atlas = atlas
-	var __editor_import_plugin: EditorImportPlugin
-	var __editor_file_system: EditorFileSystem
-	var __png_path: String
-	func _init(
-		editor_import_plugin: EditorImportPlugin,
-		editor_file_system: EditorFileSystem,
-		res_source_file_path: String
-		) -> void:
-		__editor_import_plugin = editor_import_plugin
-		__editor_file_system = editor_file_system
-		__png_path = res_source_file_path + ".png"
-	func make_atlas(atlas_image: Image) -> AtlasMakingResult:
-		var result: AtlasMakingResult = AtlasMakingResult.new()
-		atlas_image.save_png(__png_path)
-		__editor_file_system.update_file(__png_path)
-		var error: Error = __editor_import_plugin.append_import_external_resource(__png_path)
-		if error:
-			result.fail(error, "An error occured while appending import external resource (atlas texture)")
-		else:
-			result.success(ResourceLoader.load(__png_path, "Texture2D", ResourceLoader.CACHE_MODE_IGNORE))
-		return result
-
 func export(
 	res_source_file_path: String,
 	options: Dictionary,
@@ -136,13 +106,9 @@ func export(
 	) -> ExportResult:
 	return _export(
 		res_source_file_path,
-		AtlasMaker.new(
-			editor_import_plugin,
-			__editor_file_system,
-			res_source_file_path),
 		options)
 
-func _export(source_file: String, atlas_maker: AtlasMaker, options: Dictionary) -> ExportResult:
+func _export(source_file: String, options: Dictionary) -> ExportResult:
 	assert(false, "This method is abstract and must be overriden.")
 	var result: ExportResult = ExportResult.new()
 	result.fail(ERR_UNCONFIGURED)
