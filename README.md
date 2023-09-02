@@ -40,6 +40,15 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 - Several node animation strategies with `AnimationPlayer`.
 - Importing any other graphics formats as regular images with external command line utilities.
 
+## 🥁 Upcoming updates by [voting Reddit users](https://www.reddit.com/r/godot/comments/160hnuj/what_features_should_i_add_to_importality_first)
+
+1. [Layers names filters (for layers visibility overriding)](https://github.com/nklbdev/godot-4-importality/issues/11)
+1. [Linux and MacOS scripts to run Krita as different user](https://github.com/nklbdev/godot-4-importality/issues/6) (to resolve import hanging while Krita instance is running)
+1. Something else (what?) - users are undecided
+1. [New target resource-types](https://github.com/nklbdev/godot-4-importality/issues/14)
+1. [More flexible definition of borders around sprites](https://github.com/nklbdev/godot-4-importality/issues/12)
+1. [Ability to specify normal-map layer name](https://github.com/nklbdev/godot-4-importality/issues/9)
+
 ## 💽 How to install
 
 1. Install it from [Godot Asset Library](https://godotengine.org/asset-library/asset/2025) or:
