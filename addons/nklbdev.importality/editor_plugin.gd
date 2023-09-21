@@ -53,7 +53,7 @@ func _enter_tree() -> void:
 	for exporter in exporters:
 		for importer in importers:
 			var editor_import_plugin: EditorImportPlugin = \
-				CombinedEditorImportPlugin.new(exporter, importer, atlas_maker)
+				CombinedEditorImportPlugin.new(exporter, importer, atlas_maker, editor_file_system)
 			__editor_import_plugins.push_back(editor_import_plugin)
 			add_import_plugin(editor_import_plugin)
 	for Extension in STANDALONE_IMAGE_FORMAT_LOADER_EXTENSIONS:

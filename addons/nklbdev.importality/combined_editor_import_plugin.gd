@@ -22,8 +22,9 @@ var __visible_name: String
 var __options: Array[Dictionary]
 var __options_visibility_checkers: Dictionary
 var __atlas_maker: _AtlasMaker
+var __editor_file_system: EditorFileSystem
 
-func _init(exporter: _Exporter, importer: _Importer, atlas_maker: _AtlasMaker) -> void:
+func _init(exporter: _Exporter, importer: _Importer, atlas_maker: _AtlasMaker, editor_file_system: EditorFileSystem) -> void:
 	__importer = importer
 	__exporter = exporter
 	__atlas_maker = atlas_maker
@@ -33,6 +34,7 @@ func _init(exporter: _Exporter, importer: _Importer, atlas_maker: _AtlasMaker) -
 	__resource_type = importer.get_resource_type()
 	__save_extension = importer.get_save_extension()
 	__visible_name = "%s -> %s" % [exporter.get_name(), importer.get_name()]
+	__editor_file_system = editor_file_system
 	var options: Array[Dictionary]
 	__options.append_array(importer.get_options())
 	__options.append(_Options.create_option(
@@ -81,6 +83,7 @@ func _import(
 			res_source_file_path,
 			res_save_file_path,
 			self,
+			__editor_file_system,
 			options,
 			middle_import_script_context)
 		var err: Error = __append_gen_files(gen_files, middle_import_script_context.gen_files_to_add)
@@ -132,6 +135,7 @@ func _import(
 			res_source_file_path,
 			res_save_file_path,
 			self,
+			__editor_file_system,
 			options,
 			middle_import_script_context.middle_import_data,
 			post_import_script_context)
