@@ -53,6 +53,8 @@ func _import(
 	platform_variants: Array[String],
 	gen_files: Array[String]
 	) -> Error:
+	var error: Error
+
 	var export_result: _Exporter.ExportResult = \
 		__exporter.export(res_source_file_path, options, self)
 	if export_result.error:
@@ -74,22 +76,25 @@ func _import(
 		var middle_import_script: Script = ResourceLoader \
 			.load(middle_import_script_path, "Script") as Script
 		if middle_import_script == null:
-			push_error("Unable to load middle import script: %s" % [middle_import_script_path])
+			push_error("Failed to load middle import script: %s" % [middle_import_script_path])
 			return ERR_FILE_CORRUPT
 		if not __is_script_inherited_from(middle_import_script, _MiddleImportScript):
 			push_error("The script specified as middle import script is not inherited from external_scripts/middle_import_script_base.gd: %s" % [middle_import_script_path])
 			return ERR_INVALID_DECLARATION
-		middle_import_script.modify_context(
+		error = middle_import_script.modify_context(
 			res_source_file_path,
 			res_save_file_path,
 			self,
 			__editor_file_system,
 			options,
 			middle_import_script_context)
-		var err: Error = __append_gen_files(gen_files, middle_import_script_context.gen_files_to_add)
-		if err:
-			push_error("Unable to add gen files from middle-import-script context")
-			return err
+		if error:
+			push_error("Failed to perform middle-import-script")
+			return error
+		error = __append_gen_files(gen_files, middle_import_script_context.gen_files_to_add)
+		if error:
+			push_error("Failed to add gen files from middle-import-script context")
+			return error
 	# -------- MIDDLE IMPORT END --------
 
 
@@ -126,12 +131,12 @@ func _import(
 		var post_import_script: Script = ResourceLoader \
 			.load(post_import_script_path, "Script") as Script
 		if post_import_script == null:
-			push_error("Unable to load post import script: %s" % [post_import_script_path])
+			push_error("Failed to load post import script: %s" % [post_import_script_path])
 			return ERR_FILE_CORRUPT
 		if not __is_script_inherited_from(post_import_script, _PostImportScript):
 			push_error("The script specified as post import script is not inherited from external_scripts/post_import_script_base.gd: %s" % [post_import_script_path])
 			return ERR_INVALID_DECLARATION
-		post_import_script.modify_context(
+		error = post_import_script.modify_context(
 			res_source_file_path,
 			res_save_file_path,
 			self,
@@ -139,17 +144,23 @@ func _import(
 			options,
 			middle_import_script_context.middle_import_data,
 			post_import_script_context)
-		var err: Error = __append_gen_files(gen_files, post_import_script_context.gen_files_to_add)
-		if err:
-			push_error("Unable to add gen files from post-import-script context")
-			return err
+		if error:
+			push_error("Failed to perform post-import-script")
+			return error
+		error = __append_gen_files(gen_files, post_import_script_context.gen_files_to_add)
+		if error:
+			push_error("Failed to add gen files from post-import-script context")
+			return error
 	# -------- POST IMPORT END --------
 
 
-	return ResourceSaver.save(
+	error = ResourceSaver.save(
 		post_import_script_context.resource,
 		"%s.%s" % [res_save_file_path, post_import_script_context.save_extension],
 		post_import_script_context.resource_saver_flags)
+	if error:
+		push_error("Failed to save the new resource via ResourceSaver")
+	return error
 
 func _get_import_options(path: String, preset_index: int) -> Array[Dictionary]:
 	return __options

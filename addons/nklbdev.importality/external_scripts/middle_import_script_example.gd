@@ -13,7 +13,7 @@ static func modify_context(
 	# Import options
 	options: Dictionary,
 	# Context-object to modify
-	context: Context) -> void:
+	context: Context) -> Error:
 	# ------------------------------------------------
 	# You can modify or replace objects in context fields.
 	# (Be careful not to shoot yourself in the foot!)
@@ -36,8 +36,66 @@ static func modify_context(
 	# context.middle_import_data: Variant
 	#     Your custom data to use in the post-import script
 
+	# You can save your new resources directly in .godot/import folder
+	# in *.res or *.tres formats.
+	#
+	# But with images the situation is somewhat more complicated.
+	# You can embed your image into the main importing resource,
+	# but this will take up a lot of memory space and it will not be optimized
+	# because Godot can only create a CompressedTexture2D resource on its own,
+	# and only as a separated *.ctex file.
+	# You cannot save an image in *.ctex format yourself. Sad but true.
+	#
+	# In this case you need to save the image in the main resource file system
+	# as a file in supported graphics format:
+	# bmp, dds, exr, hdr, jpg/jpeg, png, tga, svg/svgz or webp.
+	#
+	# When Godot detects changes in the file system, the image will be imported.
+	# This will happen a little later.
+	# If you want to immediately use the texture from this image during
+	# the current import process, you need to force the engine to import
+	# this file right now. Do something like this:
+	# ------------------------------------------------
+
+	#var my_new_image: Image = Image.new()
+	#my_new_image.create(32, 32, false, Image.FORMAT_RGBA8)
+	#my_new_image.fill(Color.WHITE)
+	#var my_new_texture_path: String = "res://my_new_texture.png"
+	#var error: Error
+	#
+	## 1. Save your image
+	#error = my_new_image.save_png(my_new_texture_path)
+	#if error: # Do not forget to handle errors!
+	#	push_error("Failed to save my image!")
+	#	return error
+	#
+	## 2. Update file in resource filesystem before loading it with ResourceLoader
+	## You need this because the resource created from the image does not yet exist.
+	## This will force the engine to import the image, and the resource
+	## (Texture2D, BitMap or other) created from it will be available at this path.
+	# editor_file_system.update_file(my_new_texture_path)
+	#
+	## 3. Append path to your resource. After this,
+	## the resource will be available for download via ResourceLoader
+	#error = editor_import_plugin.append_import_external_resource(my_new_texture_path)
+	#if error: # Do not forget to handle errors!
+	#push_error("Failed to append import my image as external resource!")
+	#return error
+	#
+	## Add the path to your resource to the list of generated files
+	## so that the engine will establish a dependency between
+	## the main imported resource and your new separated resource.
+	#context.gen_files_to_add.push_back(my_new_texture_path)
+	#
+	## Hooray, your image has been imported and you can get
+	## the Texture2D resource from this path using ResourceLoader!
+	## You can now use this resource inside the main importing resource
+	## without the need for embedding.
+	#var my_new_texture: Texture2D = ResourceLoader.load(my_new_texture_path, "Texture2D", ResourceLoader.CACHE_MODE_IGNORE)
+
 	box_blur(context.atlas_image)
 	grayscale(context.atlas_image)
+	return OK
 
 static func box_blur(image: Image) -> void:
 	var image_copy = image.duplicate()

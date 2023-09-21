@@ -16,7 +16,7 @@ static func modify_context(
 	middle_import_data: Variant,
 	# Context-object to modify
 	context: Context,
-	) -> void:
+	) -> Error:
 	# ------------------------------------------------
 	# You can modify or replace objects in context fields.
 	# (Be careful not to shoot yourself in the foot!)
@@ -39,3 +39,4 @@ static func modify_context(
 	var packed_scene = PackedScene.new()
 	packed_scene.pack(animated_sprite_2d)
 	context.resource = packed_scene
+	return OK

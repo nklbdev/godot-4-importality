@@ -14,5 +14,5 @@ static func modify_context(
 	editor_import_plugin: EditorImportPlugin,
 	editor_file_system: EditorFileSystem,
 	options: Dictionary,
-	context: Context) -> void:
-	pass
+	context: Context) -> Error:
+	return OK

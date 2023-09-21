@@ -15,5 +15,5 @@ static func modify_context(
 	options: Dictionary,
 	middle_import_data: Variant,
 	context: Context,
-	) -> void:
-	pass
+	) -> Error:
+	return OK
