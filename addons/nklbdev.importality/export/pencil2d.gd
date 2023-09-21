@@ -31,17 +31,17 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 
 	var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
 	if os_command_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Pencil2D Command to export spritesheet", os_command_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Pencil2D Command to export spritesheet", os_command_result)
 		return result
 
 	var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
 	if os_command_arguments_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Pencil2D Command Arguments to export spritesheet", os_command_arguments_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Pencil2D Command Arguments to export spritesheet", os_command_arguments_result)
 		return result
 
 	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
 
 	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
@@ -49,7 +49,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var zip_reader: ZIPReader = ZIPReader.new()
 	var zip_error: Error = zip_reader.open(global_source_file_path)
 	if zip_error:
-		result.fail(zip_error, "Unable to open Pencil2D file \"%s\" as ZIP archive with error: %s (%s)" % [res_source_file_path, zip_error, error_string(zip_error)])
+		result.fail(zip_error, "Failed to open Pencil2D file \"%s\" as ZIP archive with error: %s (%s)" % [res_source_file_path, zip_error, error_string(zip_error)])
 		return result
 	var buffer: PackedByteArray = zip_reader.read_file("main.xml")
 	var main_xml_root: _XML.XMLNodeRoot = _XML.parse_buffer(buffer)
@@ -74,7 +74,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			AnimationOptions.FramesCount | AnimationOptions.Direction | AnimationOptions.RepeatCount,
 			animation_first_frame_index)
 		if animation_params_parsing_result.error:
-			result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters", animation_params_parsing_result)
+			result.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters", animation_params_parsing_result)
 			return result
 		if unique_animations_names.has(animation_params_parsing_result.name):
 			result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %
@@ -97,7 +97,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
 		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
 		if err:
-			result.fail(ERR_UNCONFIGURED, "Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+			result.fail(ERR_UNCONFIGURED, "Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
 				[global_temp_dir_path, err, error_string(err)])
 	var png_base_name: String = "temp"
 	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
@@ -129,7 +129,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			.path_join("%s%04d.png" % [png_base_name, image_idx + 1])
 		frames_images.push_back(Image.load_from_file(global_frame_png_path))
 		var remove_frame_file_error: Error = DirAccess.remove_absolute(global_frame_png_path)
-		if remove_frame_file_error: push_error("Unable to remove temp file: \"%s\" with error: %s %s, continuing..." %
+		if remove_frame_file_error: push_error("Failed to remove temp file: \"%s\" with error: %s %s, continuing..." %
 			[global_frame_png_path, remove_frame_file_error, error_string(remove_frame_file_error)])
 
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
@@ -218,7 +218,7 @@ class CustomImageFormatLoaderExtension:
 		if not DirAccess.dir_exists_absolute(global_temp_dir_path):
 			err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
 			if err:
-				push_error("Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+				push_error("Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
 					[global_temp_dir_path, err, error_string(err)])
 				return ERR_QUERY_FAILED
 		var png_base_name: String = "img"

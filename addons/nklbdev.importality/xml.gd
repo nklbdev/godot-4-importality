@@ -97,7 +97,7 @@ class XMLNodeElement:
 			return true
 		if raw_value.nocasecmp_to("False") == 0:
 			return false
-		push_warning("Unable to parse bool value from string: \"%s\", returning false..." % [raw_value])
+		push_warning("Failed to parse bool value from string: \"%s\", returning false..." % [raw_value])
 		return false
 
 class XMLNodeText:

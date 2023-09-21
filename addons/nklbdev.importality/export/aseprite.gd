@@ -30,17 +30,17 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 
 	var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
 	if os_command_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Aseprite Command to export spritesheet", os_command_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Aseprite Command to export spritesheet", os_command_result)
 		return result
 
 	var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
 	if os_command_arguments_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Aseprite Command Arguments to export spritesheet", os_command_arguments_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Aseprite Command Arguments to export spritesheet", os_command_arguments_result)
 		return result
 
 	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
 	var global_temp_dir_path: String = ProjectSettings.globalize_path(
 		temp_dir_path_result.value.strip_edges())
@@ -48,7 +48,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
 		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
 		if err:
-			result.fail(ERR_UNCONFIGURED, "Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+			result.fail(ERR_UNCONFIGURED, "Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
 				[global_temp_dir_path, err, error_string(err)])
 			return result
 
@@ -81,7 +81,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var json = JSON.new()
 	err = json.parse(FileAccess.get_file_as_string(global_json_path))
 	if err:
-		result.fail(ERR_INVALID_DATA, "Unable to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
+		result.fail(ERR_INVALID_DATA, "Failed to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
 		return result
 	DirAccess.remove_absolute(global_json_path)
 	var raw_sprite_sheet_data: Dictionary = json.data
@@ -150,7 +150,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			tag_data.from,
 			tag_data.to - tag_data.from + 1)
 		if animation_params_parsing_result.error:
-			result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters",
+			result.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters",
 				animation_params_parsing_result)
 			return result
 		if unique_animations_names.has(animation_params_parsing_result.name):
@@ -236,7 +236,7 @@ class CustomImageFormatLoaderExtension:
 		if not DirAccess.dir_exists_absolute(global_temp_dir_path):
 			err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
 			if err:
-				push_error("Unable to create directory for temporary files \"%s\" with error %s \"%s\"" %
+				push_error("Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
 					[global_temp_dir_path, err, error_string(err)])
 				return ERR_QUERY_FAILED
 
@@ -268,7 +268,7 @@ class CustomImageFormatLoaderExtension:
 		var json = JSON.new()
 		err = json.parse(FileAccess.get_file_as_string(global_json_path))
 		if err:
-			push_error("Unable to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
+			push_error("Failed to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
 			return ERR_INVALID_DATA
 		DirAccess.remove_absolute(global_json_path)
 		var raw_sprite_sheet_data: Dictionary = json.data

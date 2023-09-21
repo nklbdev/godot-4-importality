@@ -39,17 +39,17 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 
 	var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
 	if os_command_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Krita Command to export spritesheet", os_command_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Krita Command to export spritesheet", os_command_result)
 		return result
 
 	var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
 	if os_command_arguments_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Krita Command Arguments to export spritesheet", os_command_arguments_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Krita Command Arguments to export spritesheet", os_command_arguments_result)
 		return result
 
 	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
 	if temp_dir_path_result.error:
-		result.fail(ERR_UNCONFIGURED, "Unable to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
+		result.fail(ERR_UNCONFIGURED, "Failed to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
 	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
 
@@ -58,7 +58,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var zip_reader: ZIPReader = ZIPReader.new()
 	var zip_error: Error = zip_reader.open(global_source_file_path)
 	if zip_error:
-		result.fail(zip_error, "Unable to open Krita file \"%s\" as ZIP archive with error: %s (%s)" % [res_source_file_path, zip_error, error_string(zip_error)])
+		result.fail(zip_error, "Failed to open Krita file \"%s\" as ZIP archive with error: %s (%s)" % [res_source_file_path, zip_error, error_string(zip_error)])
 		return result
 
 	var files_names_in_zip: PackedStringArray = zip_reader.get_files()
@@ -127,7 +127,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 				story_xml_element.get_int("duration-frame") + \
 				animation_framerate * story_xml_element.get_int("duration-second"))
 			if animation_params_parsing_result.error:
-				result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters",
+				result.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters",
 					animation_params_parsing_result)
 				return result
 			if unique_animations_names.has(animation_params_parsing_result.name):
@@ -183,7 +183,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
 		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
 		if err:
-			result.fail(ERR_QUERY_FAILED, "Unable to create directory temporary files \"%s\" with error %s \"%s\"" %
+			result.fail(ERR_QUERY_FAILED, "Failed to create directory temporary files \"%s\" with error %s \"%s\"" %
 				[global_temp_dir_path, err, error_string(err)])
 			return result
 	var global_temp_png_path_pattern: String = global_temp_dir_path.path_join(temp_png_file_name_pattern)

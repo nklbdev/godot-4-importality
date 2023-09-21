@@ -28,7 +28,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			AnimationOptions.FramesCount | AnimationOptions.Direction | AnimationOptions.RepeatCount,
 			animation_first_frame_index)
 		if animation_params_parsing_result.error:
-			result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters", animation_params_parsing_result)
+			result.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters", animation_params_parsing_result)
 			return result
 		if unique_animations_names.has(animation_params_parsing_result.name):
 			result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %

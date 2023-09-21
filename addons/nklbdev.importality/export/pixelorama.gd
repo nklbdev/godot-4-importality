@@ -21,11 +21,11 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if file == null or file.get_open_error() == ERR_FILE_UNRECOGNIZED:
 		file = FileAccess.open(res_source_file_path, FileAccess.READ)
 	if file == null:
-		result.fail(ERR_FILE_CANT_OPEN, "Unable to open file with unknown error")
+		result.fail(ERR_FILE_CANT_OPEN, "Failed to open file with unknown error")
 		return result
 	var open_error: Error = file.get_open_error()
 	if open_error:
-		result.fail(ERR_FILE_CANT_OPEN, "Unable to open file with error: %s \"%s\"" % [open_error, error_string(open_error)])
+		result.fail(ERR_FILE_CANT_OPEN, "Failed to open file with error: %s \"%s\"" % [open_error, error_string(open_error)])
 		return result
 
 	var first_line: String = file.get_line()
@@ -83,7 +83,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 				pxo_tag.name, AnimationOptions.Direction | AnimationOptions.RepeatCount,
 				pxo_tag.from, animation_frames_count)
 			if animation_params_parsing_result.error:
-				result.fail(ERR_CANT_RESOLVE, "Unable to parse animation parameters",
+				result.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters",
 					animation_params_parsing_result)
 				return result
 			if unique_animations_names.has(animation_params_parsing_result.name):
@@ -179,11 +179,11 @@ class CustomImageFormatLoaderExtension:
 		if file == null or file.get_open_error() == ERR_FILE_UNRECOGNIZED:
 			file = FileAccess.open(file_access.get_path(), FileAccess.READ)
 		if file == null:
-			push_error("Unable to open file with unknown error")
+			push_error("Failed to open file with unknown error")
 			return ERR_FILE_CANT_OPEN
 		var open_error: Error = file.get_open_error()
 		if open_error:
-			push_error("Unable to open file with error: %s \"%s\"" % [open_error, error_string(open_error)])
+			push_error("Failed to open file with error: %s \"%s\"" % [open_error, error_string(open_error)])
 			return ERR_FILE_CANT_OPEN
 
 		var first_line: String = file.get_line()
