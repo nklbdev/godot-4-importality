@@ -1,8 +1,8 @@
 @tool
 extends ImageFormatLoaderExtension
 
-const _ProjectSetting = preload("project_setting.gd")
+const _Setting = preload("setting.gd")
 
-func get_project_settings() -> Array[_ProjectSetting]:
+func get_settings() -> Array[_Setting]:
 	assert(false, "This method is abstract and must be overriden.")
 	return []

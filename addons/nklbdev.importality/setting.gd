@@ -3,6 +3,8 @@ extends RefCounted
 
 const _Result = preload("result.gd").Class
 
+var __editor_settings: EditorSettings
+
 var __name: StringName
 var __initial_value: Variant
 var __type: Variant.Type
@@ -32,17 +34,18 @@ func _init(
 	__is_required = is_required
 	__is_value_empty_func = is_value_empty_func
 
-func register() -> void:
-	if not ProjectSettings.has_setting(__name):
-		ProjectSettings.set_setting(__name, __initial_value)
-	ProjectSettings.set_initial_value(__name, __initial_value)
+func register(editor_settings: EditorSettings) -> void:
+	__editor_settings = editor_settings
+	if not __editor_settings.has_setting(__name):
+		__editor_settings.set_setting(__name, __initial_value)
+	__editor_settings.set_initial_value(__name, __initial_value, false)
 	var property_info: Dictionary = {
 		"name": __name,
 		"type": __type,
 		"hint": __hint, }
 	if __hint_string:
 		property_info["hint_string"] = __hint_string
-	ProjectSettings.add_property_info(property_info)
+	__editor_settings.add_property_info(property_info)
 
 class GettingValueResult:
 	extends _Result
@@ -53,7 +56,7 @@ class GettingValueResult:
 
 func get_value() -> GettingValueResult:
 	var result = GettingValueResult.new()
-	var value = ProjectSettings.get_setting(__name)
+	var value = __editor_settings.get_setting(__name)
 	if __is_required:
 		if __is_value_empty_func.call(value):
 			result.fail(ERR_UNCONFIGURED,

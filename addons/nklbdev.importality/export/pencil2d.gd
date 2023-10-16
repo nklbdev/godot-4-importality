@@ -3,11 +3,11 @@ extends "_.gd"
 
 const _XML = preload("../xml.gd")
 
-var __os_command_project_setting: _ProjectSetting = _ProjectSetting.new(
+var __os_command_setting: _Setting = _Setting.new(
 	"pencil2d_command", "", TYPE_STRING, PROPERTY_HINT_NONE,
 	"", true, func(v: String): return v.is_empty())
 
-var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.new(
+var __os_command_arguments_setting: _Setting = _Setting.new(
 	"pencil2d_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
 	"", true, func(v: PackedStringArray): return false)
 
@@ -18,28 +18,28 @@ func _init(editor_file_system: EditorFileSystem) -> void:
 	super("Pencil2D", recognized_extensions, [
 		_Options.create_option(__ANIMATIONS_PARAMETERS_OPTION, PackedStringArray(),
 		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT)],
-	[ __os_command_project_setting, __os_command_arguments_project_setting ],
+	[ __os_command_setting, __os_command_arguments_setting ],
 	CustomImageFormatLoaderExtension.new(
 		recognized_extensions,
-		__os_command_project_setting,
-		__os_command_arguments_project_setting,
-		_Common.common_temporary_files_directory_path_project_setting))
+		__os_command_setting,
+		__os_command_arguments_setting,
+		_Common.common_temporary_files_directory_path_setting))
 
 func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var result: ExportResult = ExportResult.new()
 	var err: Error
 
-	var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
+	var os_command_result: _Setting.GettingValueResult = __os_command_setting.get_value()
 	if os_command_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Pencil2D Command to export spritesheet", os_command_result)
 		return result
 
-	var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
+	var os_command_arguments_result: _Setting.GettingValueResult = __os_command_arguments_setting.get_value()
 	if os_command_arguments_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Pencil2D Command Arguments to export spritesheet", os_command_arguments_result)
 		return result
 
-	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
+	var temp_dir_path_result: _Setting.GettingValueResult = _Common.common_temporary_files_directory_path_setting.get_value()
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
@@ -182,19 +182,19 @@ class CustomImageFormatLoaderExtension:
 	extends ImageFormatLoaderExtension
 
 	var __recognized_extensions: PackedStringArray
-	var __os_command_project_setting: _ProjectSetting
-	var __os_command_arguments_project_setting: _ProjectSetting
-	var __common_temporary_files_directory_path_project_setting: _ProjectSetting
+	var __os_command_setting: _Setting
+	var __os_command_arguments_setting: _Setting
+	var __common_temporary_files_directory_path_setting: _Setting
 
 	func _init(recognized_extensions: PackedStringArray,
-		os_command_project_setting: _ProjectSetting,
-		os_command_arguments_project_setting: _ProjectSetting,
-		common_temporary_files_directory_path: _ProjectSetting,
+		os_command_setting: _Setting,
+		os_command_arguments_setting: _Setting,
+		common_temporary_files_directory_path: _Setting,
 		) -> void:
 		__recognized_extensions = recognized_extensions
-		__os_command_project_setting = os_command_project_setting
-		__os_command_arguments_project_setting = os_command_arguments_project_setting
-		__common_temporary_files_directory_path_project_setting = common_temporary_files_directory_path
+		__os_command_setting = os_command_setting
+		__os_command_arguments_setting = os_command_arguments_setting
+		__common_temporary_files_directory_path_setting = common_temporary_files_directory_path
 
 	func _get_recognized_extensions() -> PackedStringArray:
 		return __recognized_extensions
@@ -202,17 +202,17 @@ class CustomImageFormatLoaderExtension:
 	func _load_image(image: Image, file_access: FileAccess, flags: int, scale: float) -> Error:
 		var err: Error
 
-		var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
+		var os_command_result: _Setting.GettingValueResult = __os_command_setting.get_value()
 		if os_command_result.error:
 			push_error(os_command_result.error_description)
 			return os_command_result.error
 
-		var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
+		var os_command_arguments_result: _Setting.GettingValueResult = __os_command_arguments_setting.get_value()
 		if os_command_arguments_result.error:
 			push_error(os_command_arguments_result.error_description)
 			return os_command_arguments_result.error
 
-		var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
+		var temp_dir_path_result: _Setting.GettingValueResult = _Common.common_temporary_files_directory_path_setting.get_value()
 		if temp_dir_path_result.error:
 			push_error("Failed to get Temporary Files Directory Path to export spritesheet")
 			return temp_dir_path_result.error

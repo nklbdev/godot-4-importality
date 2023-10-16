@@ -3,13 +3,13 @@ extends "standalone_image_format_loader_extension.gd"
 
 const _Common = preload("common.gd")
 
-static var command_building_rules_for_custom_image_loader_project_setting: _ProjectSetting = _ProjectSetting.new(
+static var command_building_rules_for_custom_image_loader_setting: _Setting = _Setting.new(
 	"command_building_rules_for_custom_image_loader", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE)
 
 func _get_recognized_extensions() -> PackedStringArray:
-	var rules_by_extensions_result: _ProjectSetting.GettingValueResult = command_building_rules_for_custom_image_loader_project_setting.get_value()
+	var rules_by_extensions_result: _Setting.GettingValueResult = command_building_rules_for_custom_image_loader_setting.get_value()
 	if rules_by_extensions_result.error:
-		push_error("Failed to get command building rules for custom image loader project setting")
+		push_error("Failed to get command building rules for custom image loader setting")
 		return PackedStringArray()
 	var extensions: PackedStringArray
 	for rule_string in rules_by_extensions_result.value:
@@ -24,8 +24,8 @@ func _get_recognized_extensions() -> PackedStringArray:
 			extensions.push_back(extension)
 	return extensions
 
-func get_project_settings() -> Array[_ProjectSetting]:
-	return [command_building_rules_for_custom_image_loader_project_setting]
+func get_settings() -> Array[_Setting]:
+	return [command_building_rules_for_custom_image_loader_setting]
 
 static var regex_middle_spaces: RegEx = RegEx.create_from_string("(?<=\\S)\\s(?>=\\S)")
 static func normalize_string(source: String) -> String:
@@ -58,14 +58,14 @@ func _load_image(
 	scale: float
 	) -> Error:
 
-	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
+	var temp_dir_path_result: _Setting.GettingValueResult = _Common.common_temporary_files_directory_path_setting.get_value()
 	if temp_dir_path_result.error:
 		push_error("Failed to get Temporary Files Directory Path to export image from source file: %s" % [temp_dir_path_result])
 		return ERR_UNCONFIGURED
 
-	var rules_by_extensions_result: _ProjectSetting.GettingValueResult = command_building_rules_for_custom_image_loader_project_setting.get_value()
+	var rules_by_extensions_result: _Setting.GettingValueResult = command_building_rules_for_custom_image_loader_setting.get_value()
 	if rules_by_extensions_result.error:
-		push_error("Failed to get command building rules for custom image loader project setting")
+		push_error("Failed to get command building rules for custom image loader setting")
 		return ERR_UNCONFIGURED
 
 	var command_templates_by_extensions: Dictionary
