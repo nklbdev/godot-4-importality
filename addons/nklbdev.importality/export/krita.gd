@@ -51,7 +51,14 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
-	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
+	var global_temp_dir_path: String = ProjectSettings.globalize_path(
+		temp_dir_path_result.value.strip_edges())
+	var unique_temp_dir_creation_result: _DirAccessExtensions.CreationResult = \
+		_DirAccessExtensions.create_directory_with_unique_name(global_temp_dir_path)
+	if unique_temp_dir_creation_result.error:
+		result.fail(ERR_QUERY_FAILED, "Failed to create unique temporary directory to export spritesheet", unique_temp_dir_creation_result)
+		return result
+	var unique_temp_dir_path: String = unique_temp_dir_creation_result.path
 
 	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
 
@@ -146,7 +153,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 		animation_range_xml_element.attributes["from"] = str(first_animations_frame_index)
 		animation_range_xml_element.attributes["to"] = str(last_animations_frame_index)
 
-		global_temp_kra_path = temp_dir_path_result.value.path_join(temp_kra_file_name)
+		global_temp_kra_path = unique_temp_dir_path.path_join(temp_kra_file_name)
 
 		animation_index_animation_metadata_range_xml_element.attributes["from"] = str(first_animations_frame_index)
 		animation_index_animation_metadata_range_xml_element.attributes["to"] = str(last_animations_frame_index)
@@ -180,13 +187,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 
 	zip_reader.close()
 
-	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
-		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
-		if err:
-			result.fail(ERR_QUERY_FAILED, "Failed to create directory temporary files \"%s\" with error %s \"%s\"" %
-				[global_temp_dir_path, err, error_string(err)])
-			return result
-	var global_temp_png_path_pattern: String = global_temp_dir_path.path_join(temp_png_file_name_pattern)
+	var global_temp_png_path_pattern: String = unique_temp_dir_path.path_join(temp_png_file_name_pattern)
 
 	var command: String = os_command_result.value.strip_edges()
 	var arguments: PackedStringArray = \
@@ -207,21 +208,16 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			]) % [exit_code, command, "".join(arguments)])
 		return result
 
-	if global_temp_kra_path != global_source_file_path:
-		DirAccess.remove_absolute(global_temp_kra_path)
-		pass
-
 	var unique_frames_count: int = last_animations_frame_index + 1 # - first_stories_frame
 	var frames_images: Array[Image]
 	for image_idx in unique_frames_count:
-		var global_frame_png_path: String = temp_dir_path_result.value \
+		var global_frame_png_path: String = unique_temp_dir_path \
 			.path_join("%s%04d.png" % [temp_file_base_name, image_idx])
 		if FileAccess.file_exists(global_frame_png_path):
 			var image: Image = Image.load_from_file(global_frame_png_path)
 			frames_images.push_back(image)
 		else:
 			frames_images.push_back(frames_images.back())
-		DirAccess.remove_absolute(global_frame_png_path)
 
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
 
@@ -262,6 +258,11 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 
 	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
+
+	if _DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path).error:
+		push_warning(
+			"Failed to remove unique temporary directory: \"%s\"" %
+			[unique_temp_dir_path])
 
 	result.success(sprite_sheet_building_result.atlas_image, sprite_sheet, animation_library)
 	return result

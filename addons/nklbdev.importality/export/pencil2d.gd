@@ -43,6 +43,14 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result
+	var global_temp_dir_path: String = ProjectSettings.globalize_path(
+		temp_dir_path_result.value.strip_edges())
+	var unique_temp_dir_creation_result: _DirAccessExtensions.CreationResult = \
+		_DirAccessExtensions.create_directory_with_unique_name(global_temp_dir_path)
+	if unique_temp_dir_creation_result.error:
+		result.fail(ERR_QUERY_FAILED, "Failed to create unique temporary directory to export spritesheet", unique_temp_dir_creation_result)
+		return result
+	var unique_temp_dir_path: String = unique_temp_dir_creation_result.path
 
 	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
 
@@ -93,14 +101,8 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	# --end <frame> The last frame you want to include in the exported movie. Can also be last or last-sound to automatically use the last frame containing animation or sound respectively
 	# --transparency Render transparency when possible
 	# input Path to input pencil file
-	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
-	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
-		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
-		if err:
-			result.fail(ERR_UNCONFIGURED, "Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
-				[global_temp_dir_path, err, error_string(err)])
 	var png_base_name: String = "temp"
-	var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
+	var global_temp_png_path: String = unique_temp_dir_path.path_join("%s.png" % png_base_name)
 
 	var command: String = os_command_result.value.strip_edges()
 	var arguments: PackedStringArray = \
@@ -125,12 +127,9 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 
 	var frames_images: Array[Image]
 	for image_idx in unique_frames_count:
-		var global_frame_png_path: String = temp_dir_path_result.value \
+		var global_frame_png_path: String = unique_temp_dir_path \
 			.path_join("%s%04d.png" % [png_base_name, image_idx + 1])
 		frames_images.push_back(Image.load_from_file(global_frame_png_path))
-		var remove_frame_file_error: Error = DirAccess.remove_absolute(global_frame_png_path)
-		if remove_frame_file_error: push_error("Failed to remove temp file: \"%s\" with error: %s %s, continuing..." %
-			[global_frame_png_path, remove_frame_file_error, error_string(remove_frame_file_error)])
 
 	var sprite_sheet_builder: _SpriteSheetBuilderBase = _create_sprite_sheet_builder(options)
 
@@ -171,6 +170,11 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
+	if _DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path).error:
+		push_warning(
+			"Failed to remove unique temporary directory: \"%s\"" %
+			[unique_temp_dir_path])
+
 	result.success(sprite_sheet_building_result.atlas_image, sprite_sheet, animation_library)
 	return result
 
@@ -208,21 +212,23 @@ class CustomImageFormatLoaderExtension:
 			push_error(os_command_arguments_result.error_description)
 			return os_command_arguments_result.error
 
-		var temp_dir_path_result: _ProjectSetting.GettingValueResult = __common_temporary_files_directory_path_project_setting.get_value()
+		var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
 		if temp_dir_path_result.error:
-			push_error(temp_dir_path_result.error_description)
+			push_error("Failed to get Temporary Files Directory Path to export spritesheet")
 			return temp_dir_path_result.error
+		var global_temp_dir_path: String = ProjectSettings.globalize_path(
+			temp_dir_path_result.value.strip_edges())
+		var unique_temp_dir_creation_result: _DirAccessExtensions.CreationResult = \
+			_DirAccessExtensions.create_directory_with_unique_name(global_temp_dir_path)
+		if unique_temp_dir_creation_result.error:
+			push_error("Failed to create unique temporary directory to export spritesheet")
+			return unique_temp_dir_creation_result.error
+		var unique_temp_dir_path: String = unique_temp_dir_creation_result.path
 
 		var global_source_file_path: String = ProjectSettings.globalize_path(file_access.get_path())
-		var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
-		if not DirAccess.dir_exists_absolute(global_temp_dir_path):
-			err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
-			if err:
-				push_error("Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
-					[global_temp_dir_path, err, error_string(err)])
-				return ERR_QUERY_FAILED
-		var png_base_name: String = "img"
-		var global_temp_png_path: String = temp_dir_path_result.value.path_join("%s.png" % png_base_name)
+
+		const png_base_name: String = "img"
+		var global_temp_png_path: String = unique_temp_dir_path.path_join("%s.png" % png_base_name)
 
 		var command: String = os_command_result.value.strip_edges()
 		var arguments: PackedStringArray = \
@@ -245,11 +251,17 @@ class CustomImageFormatLoaderExtension:
 				]) % [exit_code, command, "".join(arguments)])
 			return ERR_QUERY_FAILED
 
-		var global_frame_png_path: String = temp_dir_path_result.value \
+		var global_frame_png_path: String = unique_temp_dir_path \
 			.path_join("%s0001.png" % [png_base_name])
 		err = image.load_png_from_buffer(FileAccess.get_file_as_bytes(global_frame_png_path))
 		if err:
 			push_error("An error occurred while image loading")
 			return err
+
+		if _DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path).error:
+			push_warning(
+				"Failed to remove unique temporary directory: \"%s\"" %
+				[unique_temp_dir_path])
+
 		return OK
 

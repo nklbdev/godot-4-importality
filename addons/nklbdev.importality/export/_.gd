@@ -5,6 +5,7 @@ const _Result = preload("../result.gd").Class
 const _Common = preload("../common.gd")
 const _Options = preload("../options.gd")
 const _ProjectSetting = preload("../project_setting.gd")
+const _DirAccessExtensions = preload("../dir_access_ext.gd")
 
 const _SpriteSheetBuilderBase = preload("../sprite_sheet_builder/_.gd")
 const _GridBasedSpriteSheetBuilder = preload("../sprite_sheet_builder/grid_based.gd")

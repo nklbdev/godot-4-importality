@@ -44,16 +44,17 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 		return result
 	var global_temp_dir_path: String = ProjectSettings.globalize_path(
 		temp_dir_path_result.value.strip_edges())
+	var unique_temp_dir_creation_result: _DirAccessExtensions.CreationResult = \
+		_DirAccessExtensions.create_directory_with_unique_name(global_temp_dir_path)
+	if unique_temp_dir_creation_result.error:
+		result.fail(ERR_QUERY_FAILED, "Failed to create unique temporary directory to export spritesheet", unique_temp_dir_creation_result)
+		return result
+	var unique_temp_dir_path: String = unique_temp_dir_creation_result.path
 
-	if not DirAccess.dir_exists_absolute(global_temp_dir_path):
-		err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
-		if err:
-			result.fail(ERR_UNCONFIGURED, "Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
-				[global_temp_dir_path, err, error_string(err)])
-			return result
+	var global_source_file_path: String = ProjectSettings.globalize_path(res_source_file_path)
 
-	var global_png_path: String = global_temp_dir_path.path_join("temp.png")
-	var global_json_path: String = global_temp_dir_path.path_join("temp.json")
+	var global_png_path: String = unique_temp_dir_path.path_join("temp.png")
+	var global_json_path: String = unique_temp_dir_path.path_join("temp.json")
 
 	var command: String = os_command_result.value.strip_edges()
 	var arguments: PackedStringArray = \
@@ -64,7 +65,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			"--list-tags",
 			"--sheet", global_png_path,
 			"--data", global_json_path,
-			ProjectSettings.globalize_path(res_source_file_path)])
+			global_source_file_path])
 
 	var output: Array = []
 	var exit_code: int = OS.execute(command, arguments, output, true, false)
@@ -77,13 +78,11 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			]) % [exit_code, command, "".join(arguments)])
 		return result
 	var raw_atlas_image: Image = Image.load_from_file(global_png_path)
-	DirAccess.remove_absolute(global_png_path)
 	var json = JSON.new()
 	err = json.parse(FileAccess.get_file_as_string(global_json_path))
 	if err:
 		result.fail(ERR_INVALID_DATA, "Failed to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
 		return result
-	DirAccess.remove_absolute(global_json_path)
 	var raw_sprite_sheet_data: Dictionary = json.data
 
 	var sprite_sheet_layout: _Common.SpriteSheetLayout = options[_Options.SPRITE_SHEET_LAYOUT]
@@ -186,6 +185,11 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	if not autoplay_animation_name.is_empty() and animation_library.autoplay_index < 0:
 		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
+	if _DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path).error:
+		push_warning(
+			"Failed to remove unique temporary directory: \"%s\"" %
+			[unique_temp_dir_path])
+
 	result.success(sprite_sheet_building_result.atlas_image, sprite_sheet, animation_library)
 	return result
 
@@ -225,20 +229,21 @@ class CustomImageFormatLoaderExtension:
 			push_error(os_command_arguments_result.error_description)
 			return os_command_arguments_result.error
 
-		var temp_dir_path_result: _ProjectSetting.GettingValueResult = __common_temporary_files_directory_path_project_setting.get_value()
+		var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
 		if temp_dir_path_result.error:
-			push_error(temp_dir_path_result.error_description)
+			push_error("Failed to get Temporary Files Directory Path to export spritesheet")
 			return temp_dir_path_result.error
-		var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
+		var global_temp_dir_path: String = ProjectSettings.globalize_path(
+			temp_dir_path_result.value.strip_edges())
+		var unique_temp_dir_creation_result: _DirAccessExtensions.CreationResult = \
+			_DirAccessExtensions.create_directory_with_unique_name(global_temp_dir_path)
+		if unique_temp_dir_creation_result.error:
+			push_error("Failed to create unique temporary directory to export spritesheet")
+			return unique_temp_dir_creation_result.error
+		var unique_temp_dir_path: String = unique_temp_dir_creation_result.path
 
-		var global_png_path: String = global_temp_dir_path.path_join("temp.png")
-		var global_json_path: String = global_temp_dir_path.path_join("temp.json")
-		if not DirAccess.dir_exists_absolute(global_temp_dir_path):
-			err = DirAccess.make_dir_recursive_absolute(global_temp_dir_path)
-			if err:
-				push_error("Failed to create directory for temporary files \"%s\" with error %s \"%s\"" %
-					[global_temp_dir_path, err, error_string(err)])
-				return ERR_QUERY_FAILED
+		var global_png_path: String = unique_temp_dir_path.path_join("temp.png")
+		var global_json_path: String = unique_temp_dir_path.path_join("temp.json")
 
 		var command: String = os_command_result.value.strip_edges()
 		var arguments: PackedStringArray = \
@@ -264,17 +269,20 @@ class CustomImageFormatLoaderExtension:
 			return ERR_QUERY_FAILED
 
 		var raw_atlas_image: Image = Image.load_from_file(global_png_path)
-		DirAccess.remove_absolute(global_png_path)
 		var json = JSON.new()
 		err = json.parse(FileAccess.get_file_as_string(global_json_path))
 		if err:
 			push_error("Failed to parse sprite sheet json data with error %s \"%s\"" % [err, error_string(err)])
 			return ERR_INVALID_DATA
-		DirAccess.remove_absolute(global_json_path)
 		var raw_sprite_sheet_data: Dictionary = json.data
 
 		var source_image_size: Vector2i = _Common.get_vector2i(
 			raw_sprite_sheet_data.frames[0].sourceSize, "w", "h")
+
+		if _DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path).error:
+			push_warning(
+				"Failed to remove unique temporary directory: \"%s\"" %
+				[unique_temp_dir_path])
 
 		image.copy_from(raw_atlas_image.get_region(Rect2i(Vector2i.ZERO, source_image_size)))
 		return OK
