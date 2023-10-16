@@ -1,6 +1,6 @@
 @tool
 
-const _ProjectSetting = preload("project_setting.gd")
+const _Setting = preload("setting.gd")
 
 const SPRITE_SHEET_LAYOUTS_NAMES: PackedStringArray = [
 	"Packed",
@@ -91,7 +91,7 @@ class AnimationLibraryInfo:
 static func get_vector2i(dict: Dictionary, x_key: String, y_key: String) -> Vector2i:
 	return Vector2i(int(dict[x_key]), int(dict[y_key]))
 
-static var common_temporary_files_directory_path_project_setting: _ProjectSetting = _ProjectSetting.new(
+static var common_temporary_files_directory_path_setting: _Setting = _Setting.new(
 	"temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
 	"", true, func(v: String): return v.is_empty())
 

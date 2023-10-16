@@ -3,19 +3,19 @@ extends "_.gd"
 
 const _XML = preload("../xml.gd")
 
-var __os_command_project_setting: _ProjectSetting = _ProjectSetting.new(
+var __os_command_setting: _Setting = _Setting.new(
 	"krita_command", "", TYPE_STRING, PROPERTY_HINT_NONE,
 	"", true, func(v: String): return v.is_empty())
 
-var __os_command_arguments_project_setting: _ProjectSetting = _ProjectSetting.new(
+var __os_command_arguments_setting: _Setting = _Setting.new(
 	"krita_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
 	"", true, func(v: PackedStringArray): return false)
 
 func _init(editor_file_system: EditorFileSystem) -> void:
 	var recognized_extensions: PackedStringArray = ["kra", "krita"]
 	super("Krita", recognized_extensions, [], [
-		__os_command_project_setting,
-		__os_command_arguments_project_setting,
+		__os_command_setting,
+		__os_command_arguments_setting,
 	], CustomImageFormatLoaderExtension.new(recognized_extensions))
 
 func __validate_image_name(image_name: String) -> _Result:
@@ -37,17 +37,17 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	var result: ExportResult = ExportResult.new()
 	var err: Error
 
-	var os_command_result: _ProjectSetting.GettingValueResult = __os_command_project_setting.get_value()
+	var os_command_result: _Setting.GettingValueResult = __os_command_setting.get_value()
 	if os_command_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Krita Command to export spritesheet", os_command_result)
 		return result
 
-	var os_command_arguments_result: _ProjectSetting.GettingValueResult = __os_command_arguments_project_setting.get_value()
+	var os_command_arguments_result: _Setting.GettingValueResult = __os_command_arguments_setting.get_value()
 	if os_command_arguments_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Krita Command Arguments to export spritesheet", os_command_arguments_result)
 		return result
 
-	var temp_dir_path_result: _ProjectSetting.GettingValueResult = _Common.common_temporary_files_directory_path_project_setting.get_value()
+	var temp_dir_path_result: _Setting.GettingValueResult = _Common.common_temporary_files_directory_path_setting.get_value()
 	if temp_dir_path_result.error:
 		result.fail(ERR_UNCONFIGURED, "Failed to get Temporary Files Directory Path to export spritesheet", temp_dir_path_result)
 		return result

@@ -4,7 +4,7 @@ extends RefCounted
 const _Result = preload("../result.gd").Class
 const _Common = preload("../common.gd")
 const _Options = preload("../options.gd")
-const _ProjectSetting = preload("../project_setting.gd")
+const _Setting = preload("../setting.gd")
 const _DirAccessExtensions = preload("../dir_access_ext.gd")
 
 const _SpriteSheetBuilderBase = preload("../sprite_sheet_builder/_.gd")
@@ -41,7 +41,7 @@ class ExportResult:
 
 var __name: String
 var __recognized_extensions: PackedStringArray
-var __project_settings: Array[_ProjectSetting] = [_Common.common_temporary_files_directory_path_project_setting]
+var __settings: Array[_Setting] = [_Common.common_temporary_files_directory_path_setting]
 var __options: Array[Dictionary] = [
 	_Options.create_option(_Options.EDGES_ARTIFACTS_AVOIDANCE_METHOD, _Common.EdgesArtifactsAvoidanceMethod.NONE,
 		PROPERTY_HINT_ENUM, ",".join(_Common.EDGES_ARTIFACTS_AVOIDANCE_METHODS_NAMES),
@@ -76,13 +76,13 @@ func _init(
 	name: String,
 	recognized_extensions: PackedStringArray,
 	options: Array[Dictionary],
-	project_settings: Array[_ProjectSetting],
+	settings: Array[_Setting],
 	image_format_loader_extension: ImageFormatLoaderExtension = null
 	) -> void:
 	__name = name
 	__recognized_extensions = recognized_extensions
 	__options.append_array(options)
-	__project_settings.append_array(project_settings)
+	__settings.append_array(settings)
 	__image_format_loader_extension = image_format_loader_extension
 
 func get_recognized_extensions() -> PackedStringArray:
@@ -94,8 +94,8 @@ func get_options() -> Array[Dictionary]:
 func get_name() -> String:
 	return __name
 
-func get_project_settings() -> Array[_ProjectSetting]:
-	return __project_settings
+func get_settings() -> Array[_Setting]:
+	return __settings
 
 func get_image_format_loader_extension() -> ImageFormatLoaderExtension:
 	return __image_format_loader_extension

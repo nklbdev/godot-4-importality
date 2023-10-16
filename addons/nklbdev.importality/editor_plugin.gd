@@ -34,12 +34,15 @@ var __editor_import_plugins: Array[EditorImportPlugin]
 var __image_format_loader_extensions: Array[ImageFormatLoaderExtension]
 
 func _enter_tree() -> void:
-	var editor_file_system: EditorFileSystem = get_editor_interface().get_resource_filesystem()
+	var editor_interface: EditorInterface = get_editor_interface()
+	var editor_file_system: EditorFileSystem = editor_interface.get_resource_filesystem()
+	var editor_settings: EditorSettings = editor_interface.get_editor_settings()
+
 	var exporters: Array[ExporterBase]
 	for Exporter in EXPORTERS_SCRIPTS:
 		var exporter: ExporterBase = Exporter.new(editor_file_system)
-		for setting in exporter.get_project_settings():
-			setting.register()
+		for setting in exporter.get_settings():
+			setting.register(editor_settings)
 		exporters.push_back(exporter)
 		var image_format_loader_extension: ImageFormatLoaderExtension = \
 			exporter.get_image_format_loader_extension()
@@ -59,8 +62,8 @@ func _enter_tree() -> void:
 	for Extension in STANDALONE_IMAGE_FORMAT_LOADER_EXTENSIONS:
 		var image_format_loader_extension: StandaloneImageFormatLoaderExtension = \
 			Extension.new() as StandaloneImageFormatLoaderExtension
-		for setting in image_format_loader_extension.get_project_settings():
-			setting.register()
+		for setting in image_format_loader_extension.get_settings():
+			setting.register(editor_settings)
 		__image_format_loader_extensions.push_back(image_format_loader_extension)
 		image_format_loader_extension.add_format_loader()
 
