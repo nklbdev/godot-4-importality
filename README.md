@@ -8,7 +8,7 @@
 **Importality - is an add-on for [Godot](https://godotengine.org) engine for importing graphics and animations from popular formats.**
 
 ### ATTENTION!
-In version 0.3.0, the plugin settings were moved from the ProjectSettings to the EditorSettings! This may come as a surprise and may break some of your configured processes! But this will allow you to avoid publishing your local settings along with the project file to the Git repository, and will make CI/DC easier.
+In version 0.3.0, the plugin settings were moved from the ProjectSettings to the EditorSettings! This may come as a surprise and may break some of your configured processes! But this will allow you to avoid publishing your local settings along with the project file to the Git repository, and will make CI/CD easier.
 
 ## 📜 Table of contents
 
