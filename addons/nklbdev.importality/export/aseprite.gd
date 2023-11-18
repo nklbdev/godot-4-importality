@@ -141,7 +141,6 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 	all_frames.resize(used_frames_count)
 	var unique_animations_names: PackedStringArray
 	for animation_index in animations_count:
-		print("asdfasdf")
 		var tag_data: Dictionary = tags_data[animation_index]
 
 		var animation_params_parsing_result: AnimationParamsParsingResult = _parse_animation_params(
@@ -168,7 +167,6 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 		animation.direction = __aseprite_animation_directions.find(tag_data.direction)
 		if animation_params_parsing_result.direction >= 0:
 			animation.direction = animation_params_parsing_result.direction
-		print(tag_data)
 		animation.repeat_count = int(tag_data.get("repeat", "0"))
 		if animation_params_parsing_result.repeat_count >= 0:
 			animation.repeat_count = animation_params_parsing_result.repeat_count
