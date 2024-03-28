@@ -21,19 +21,9 @@ func make_atlas(
 	editor_import_plugin: EditorImportPlugin,
 	) -> AtlasMakingResult:
 	var result: AtlasMakingResult = AtlasMakingResult.new()
-	var res_png_path: String = res_source_file_path + ".png"
-	if not (res_png_path.is_absolute_path() and res_png_path.begins_with("res://")):
-		result.fail(ERR_FILE_BAD_PATH, "Path to PNG-file is not valid: %s" % [res_png_path])
-		return result
-	var error: Error
-	error = atlas_image.save_png(res_png_path)
-	if error:
-		result.fail(error, "An error occured while saving atlas-image to png-file: %s" % [res_png_path])
-		return result
-	__editor_file_system.update_file(res_png_path)
-	error = editor_import_plugin.append_import_external_resource(res_png_path)
-	if error:
-		result.fail(error, "An error occured while appending import external resource (atlas texture)")
-		return result
-	result.success(ResourceLoader.load(res_png_path, "Texture2D", ResourceLoader.CACHE_MODE_IGNORE))
+
+	var portableCompressedTexture: PortableCompressedTexture2D = PortableCompressedTexture2D.new()
+	portableCompressedTexture.create_from_image(atlas_image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
+
+	result.success(portableCompressedTexture)
 	return result
