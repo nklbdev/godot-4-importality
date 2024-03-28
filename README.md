@@ -8,7 +8,7 @@
 **Importality - is an add-on for [Godot](https://godotengine.org) engine for importing graphics and animations from popular formats.**
 
 ### ATTENTION!
-The latest DEV-versions of Godot have broken backward compatibility, and when importing `SpriteFrames` you may see that all frames are empty. In this case, try using the plugin from the [fix_empty_frames](https://github.com/nklbdev/godot-4-importality/tree/fix_empty_frames) branch. It uses `PortableCompressedTexture2D` to save the atlas instead of a separated PNG-file.
+The latest DEV-versions of Godot have broken backward compatibility, and when importing `SpriteFrames` you may see that all frames are empty. In this case, try using the plugin from the [fix_empty_frames](https://github.com/nklbdev/godot-4-importality/tree/fix_empty_frames) branch. It uses `PortableCompressedTexture2D` to save the atlas embedded right in `SpriteFrames` resource instead of saving a separated PNG-file.
 Please let me know about any problems with this.
 
 ### ATTENTION!
