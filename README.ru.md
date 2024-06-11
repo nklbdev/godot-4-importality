@@ -57,7 +57,7 @@
 1. Установите его из [Библиотеки Ассетов Godot](https://godotengine.org/asset-library/asset/2025) или:
     - Склонируйте этот репозиторий или скачайте его содержимое в виде архива.
     - Поместите содержимое папки `addons` репозитория в папку `addons` вашего проекта.
-1. Настройте параметры в `Project Settings` -> `General` -> `Advanced Settings` -> `Importality`
+1. Настройте параметры в `Editor Settings` -> `Importality`
     - [Укажите директорию для временных файлов](https://github.com/nklbdev/godot-4-importality/wiki/about-temporary-files-and-ram_drives-(ru)).
     - Укажите команду и её параметры для запуска вашего редактора в режиме экспорта данных, если это необходимо. Как настроить параметры для вашего графического приложения читайте в соответствующей статье [вики](https://github.com/nklbdev/godot-4-importality/wiki), посвящённой ему.
 
