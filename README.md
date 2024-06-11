@@ -57,7 +57,7 @@ I previously published an [add-on for importing Aseprite files](https://github.c
 1. Install it from [Godot Asset Library](https://godotengine.org/asset-library/asset/2025) or:
     - Clone this repository or download its contents as an archive.
     - Place the contents of the `addons` folder of the repository into the `addons` folder of your project.
-1. Adjust the settings in `Project Settings` -> `General` -> `Advanced Settings` -> `Importality`
+1. Adjust the settings in `Editor Settings` -> `Importality`
      - [Specify a directory for temporary files](https://github.com/nklbdev/godot-4-importality/wiki/about-temporary-files-and-ram_drives-(en)).
      - Specify the command and its parameters to launch your editor in data export mode, if necessary. How to configure settings for your graphical application, see the corresponding article on the [wiki](https://github.com/nklbdev/godot-4-importality/wiki).
 

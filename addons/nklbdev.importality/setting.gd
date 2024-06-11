@@ -60,8 +60,8 @@ func get_value() -> GettingValueResult:
 	if __is_required:
 		if __is_value_empty_func.call(value):
 			result.fail(ERR_UNCONFIGURED,
-				"The project settging \"%s\" is not specified!" % [__name] + \
-				"Specify it in Projest Settings -> General -> Importality.")
+				"The editor setting \"%s\" is not specified! " % [__name] + \
+				"Specify it in Editor Settings -> Importality.")
 			return result
 	result.success(value)
 	return result
