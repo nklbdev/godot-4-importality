@@ -7,7 +7,7 @@ enum PxoLayerType {
 	LAYER_3D = 2,
 }
 
-func _init(editor_file_system: EditorFileSystem) -> void:
+func _init() -> void:
 	var recognized_extensions: PackedStringArray = ["pxo"]
 	super("Pixelorama", recognized_extensions, [
 	], [

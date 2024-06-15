@@ -41,6 +41,20 @@ enum AnimationDirection {
 	PING_PONG_REVERSE = 3,
 }
 
+const ANIMATION_STRATEGIES_NAMES: PackedStringArray = [
+	"Animate sprite's region and offset",
+	"Animate single atlas texture's region and margin",
+	"Animate multiple atlas textures instances",
+]
+
+enum AnimationStrategy {
+	SPRITE_REGION_AND_OFFSET = 0,
+	SINGLE_ATLAS_TEXTURE_REGION_AND_MARGIN = 1,
+	MULTIPLE_ATLAS_TEXTURES_INSTANCES = 2,
+	MAX_ALL = 5,
+	MAX_WITH_BORDERS = 3,
+}
+
 class SpriteInfo:
 	extends RefCounted
 	var region: Rect2i
@@ -92,7 +106,7 @@ static func get_vector2i(dict: Dictionary, x_key: String, y_key: String) -> Vect
 	return Vector2i(int(dict[x_key]), int(dict[y_key]))
 
 static var common_temporary_files_directory_path_setting: _Setting = _Setting.new(
-	"temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
+	&"temporary_files_directory_path", "", TYPE_STRING, PROPERTY_HINT_GLOBAL_DIR,
 	"", true, func(v: String): return v.is_empty())
 
 const __backslash: String = "\\"

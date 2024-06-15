@@ -1,9 +1,9 @@
 @tool
 extends "_.gd"
 
-const __ANIMATIONS_PARAMETERS_OPTION: StringName = "piskel/animations_parameters"
+const __ANIMATIONS_PARAMETERS_OPTION: StringName = &"piskel/animations_parameters"
 
-func _init(editor_file_system: EditorFileSystem) -> void:
+func _init() -> void:
 	var recognized_extensions: PackedStringArray = ["piskel"]
 	super("Piskel", recognized_extensions, [
 		_Options.create_option(__ANIMATIONS_PARAMETERS_OPTION, PackedStringArray(),

@@ -40,11 +40,11 @@ func register(editor_settings: EditorSettings) -> void:
 		__editor_settings.set_setting(__name, __initial_value)
 	__editor_settings.set_initial_value(__name, __initial_value, false)
 	var property_info: Dictionary = {
-		"name": __name,
-		"type": __type,
-		"hint": __hint, }
+		&"name": __name,
+		&"type": __type,
+		&"hint": __hint, }
 	if __hint_string:
-		property_info["hint_string"] = __hint_string
+		property_info[&"hint_string"] = __hint_string
 	__editor_settings.add_property_info(property_info)
 
 class GettingValueResult:
