@@ -14,7 +14,7 @@ static func _create_animation_player(
 	track_value_getters_by_property_path: Dictionary
 	) -> AnimationPlayer:
 	var animation_player: AnimationPlayer = AnimationPlayer.new()
-	animation_player.name = "AnimationPlayer"
+	animation_player.name = &"AnimationPlayer"
 	var animation_library: AnimationLibrary = AnimationLibrary.new()
 
 	for animation_info in animation_library_info.animations:

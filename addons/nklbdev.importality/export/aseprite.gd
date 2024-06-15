@@ -14,7 +14,7 @@ var __os_command_arguments_setting: _Setting = _Setting.new(
 	"aseprite_or_libre_sprite_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
 	"", true, func(v: PackedStringArray): return false)
 
-func _init(editor_file_system: EditorFileSystem) -> void:
+func _init() -> void:
 	var recognized_extensions: PackedStringArray = ["ase", "aseprite"]
 	super("Aseprite", recognized_extensions, [],
 		[__os_command_setting, __os_command_arguments_setting],

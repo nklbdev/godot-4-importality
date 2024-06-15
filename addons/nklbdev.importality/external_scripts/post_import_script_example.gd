@@ -8,8 +8,6 @@ static func modify_context(
 	# EditorImportPlugin instance to call append_import_external_resource
 	# or other methods
 	editor_import_plugin: EditorImportPlugin,
-	# EditorFileSystem instance to call update_file method
-	editor_file_system: EditorFileSystem,
 	# Import options
 	options: Dictionary,
 	# Your custom data from middle-import script

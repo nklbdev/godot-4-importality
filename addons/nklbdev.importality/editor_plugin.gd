@@ -2,8 +2,6 @@
 extends EditorPlugin
 
 const ExporterBase = preload("export/_.gd")
-const _AtlasMaker = preload("atlas_maker.gd")
-
 const EXPORTERS_SCRIPTS: Array[GDScript] = [
 	preload("export/aseprite.gd"),
 	preload("export/krita.gd"),
@@ -35,12 +33,11 @@ var __image_format_loader_extensions: Array[ImageFormatLoaderExtension]
 
 func _enter_tree() -> void:
 	var editor_interface: EditorInterface = get_editor_interface()
-	var editor_file_system: EditorFileSystem = editor_interface.get_resource_filesystem()
 	var editor_settings: EditorSettings = editor_interface.get_editor_settings()
 
 	var exporters: Array[ExporterBase]
 	for Exporter in EXPORTERS_SCRIPTS:
-		var exporter: ExporterBase = Exporter.new(editor_file_system)
+		var exporter: ExporterBase = Exporter.new()
 		for setting in exporter.get_settings():
 			setting.register(editor_settings)
 		exporters.push_back(exporter)
@@ -52,11 +49,10 @@ func _enter_tree() -> void:
 	var importers: Array[ImporterBase]
 	for Importer in IMPORTERS_SCRIPTS:
 		importers.push_back(Importer.new())
-	var atlas_maker: _AtlasMaker = _AtlasMaker.new(editor_file_system)
 	for exporter in exporters:
 		for importer in importers:
 			var editor_import_plugin: EditorImportPlugin = \
-				CombinedEditorImportPlugin.new(exporter, importer, atlas_maker, editor_file_system)
+				CombinedEditorImportPlugin.new(exporter, importer)
 			__editor_import_plugins.push_back(editor_import_plugin)
 			add_import_plugin(editor_import_plugin)
 	for Extension in STANDALONE_IMAGE_FORMAT_LOADER_EXTENSIONS:

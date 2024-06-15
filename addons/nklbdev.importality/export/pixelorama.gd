@@ -4,7 +4,7 @@ extends "_.gd"
 const _PxoV2 = preload("_pxo_v2.gd")
 const _PxoV3 = preload("_pxo_v3.gd")
 
-func _init(editor_file_system: EditorFileSystem) -> void:
+func _init() -> void:
 	var recognized_extensions: PackedStringArray = ["pxo"]
 	super("Pixelorama", recognized_extensions, [
 	], [

@@ -1,10 +1,10 @@
 @tool
 extends "_.gd"
 
-const __ANIMATION_MERGE_EQUAL_CONSEQUENT_FRAMES_OPTION: StringName = "animation/merge_equal_sonsequent_frames"
-const __ANIMATION_FLATTEN_REPETITION_OPTION: StringName = "animation/flatten_repetition"
+const __ANIMATION_MERGE_EQUAL_CONSEQUENT_FRAMES_OPTION: StringName = &"animation/merge_equal_sonsequent_frames"
+const __ANIMATION_FLATTEN_REPETITION_OPTION: StringName = &"animation/flatten_repetition"
 
-func _init() -> void: super("Sprite sheet (JSON)", "JSON", "res", [
+func _init() -> void: super("Sprite sheet (PortableCompressedTexture2D)", "PortableCompressedTexture2D", "res", [
 		_Options.create_option(__ANIMATION_MERGE_EQUAL_CONSEQUENT_FRAMES_OPTION, true,
 			PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 		_Options.create_option(__ANIMATION_FLATTEN_REPETITION_OPTION, true,
@@ -66,18 +66,15 @@ func import(
 			frames = frames_data,
 		})
 
-	var json: JSON = JSON.new()
-	json.data = {
-		sprite_sheet = {
-			atlas = atlas,
-			source_image_size = sprite_sheet.source_image_size,
-			sprites = sprites,
-		},
-		animation_library = {
-			animations = animations,
-			autoplay_index = animation_library.autoplay_index,
-		},
-	}
-	json.get_parsed_text()
-	result.success(json, ResourceSaver.FLAG_COMPRESS)
+	var portable_compressed_texture: PortableCompressedTexture2D = PortableCompressedTexture2D.new()
+	portable_compressed_texture.create_from_image(
+		atlas.get_image(),
+		PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
+	portable_compressed_texture.set_meta(&"source_image_size", sprite_sheet.source_image_size);
+	portable_compressed_texture.set_meta(&"sprites", sprites);
+	portable_compressed_texture.set_meta(&"animations", animations);
+	portable_compressed_texture.set_meta(&"source_image_size", sprite_sheet.source_image_size);
+	portable_compressed_texture.set_meta(&"autoplay_index", animation_library.autoplay_index);
+		
+	result.success(portable_compressed_texture, ResourceSaver.FLAG_COMPRESS)
 	return result

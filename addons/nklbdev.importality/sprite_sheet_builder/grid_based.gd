@@ -158,10 +158,6 @@ func build_sprite_sheet(images: Array[Image]) -> SpriteSheetBuildingResult:
 			_Common.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION:
 				pass
 		atlas_image.blit_rect(image, image_region, sprite.region.position)# +
-			#(Vector2i.ONE
-			#if _edges_artifacts_avoidance_method == \
-			#	_Models.SpriteSheetModel.EdgesArtifactsAvoidanceMethod.TRANSPARENT_EXPANSION else
-			#Vector2i.ZERO))
 		match _edges_artifacts_avoidance_method:
 			_Common.EdgesArtifactsAvoidanceMethod.BORDERS_EXTRUSION:
 				_extrude_borders(atlas_image, sprite.region)

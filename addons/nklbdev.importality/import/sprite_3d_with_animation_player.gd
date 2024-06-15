@@ -27,7 +27,7 @@ func import(
 	var animation_player: AnimationPlayer
 	match options[_Options.ANIMATION_STRATEGY]:
 
-		AnimationStrategy.SPRITE_REGION_AND_OFFSET:
+		_Common.AnimationStrategy.SPRITE_REGION_AND_OFFSET:
 			sprite.texture = atlas
 			sprite.region_enabled = true
 			animation_player = _create_animation_player(animation_library, {
@@ -42,7 +42,7 @@ func import(
 				".:region_rect": func(frame: _Common.FrameInfo) -> Rect2:
 					return Rect2(frame.sprite.region) })
 
-		AnimationStrategy.SINGLE_ATLAS_TEXTURE_REGION_AND_MARGIN:
+		_Common.AnimationStrategy.SINGLE_ATLAS_TEXTURE_REGION_AND_MARGIN:
 			var atlas_texture: AtlasTexture = AtlasTexture.new()
 			atlas_texture.filter_clip = filter_clip_enabled
 			atlas_texture.resource_local_to_scene = true
@@ -60,7 +60,7 @@ func import(
 				".:texture:region": func(frame: _Common.FrameInfo) -> Rect2:
 					return Rect2(frame.sprite.region) if frame.sprite.region.has_area() else Rect2(0, 0, 1, 1) })
 
-		AnimationStrategy.MULTIPLE_ATLAS_TEXTURES_INSTANCES:
+		_Common.AnimationStrategy.MULTIPLE_ATLAS_TEXTURES_INSTANCES:
 			var atlas_textures: Array[AtlasTexture]
 			var empty_atlas_texture: AtlasTexture = AtlasTexture.new()
 			empty_atlas_texture.filter_clip = filter_clip_enabled

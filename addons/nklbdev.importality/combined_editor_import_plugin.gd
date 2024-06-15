@@ -5,7 +5,6 @@ const _Common = preload("common.gd")
 const _Options = preload("options.gd")
 const _Exporter = preload("export/_.gd")
 const _Importer = preload("import/_.gd")
-const _AtlasMaker = preload("atlas_maker.gd")
 const _MiddleImportScript = preload("external_scripts/middle_import_script_base.gd")
 const _PostImportScript = preload("external_scripts/post_import_script_base.gd")
 
@@ -21,20 +20,16 @@ var __save_extension: String
 var __visible_name: String
 var __options: Array[Dictionary]
 var __options_visibility_checkers: Dictionary
-var __atlas_maker: _AtlasMaker
-var __editor_file_system: EditorFileSystem
 
-func _init(exporter: _Exporter, importer: _Importer, atlas_maker: _AtlasMaker, editor_file_system: EditorFileSystem) -> void:
+func _init(exporter: _Exporter, importer: _Importer) -> void:
 	__importer = importer
 	__exporter = exporter
-	__atlas_maker = atlas_maker
 	__import_order = 1
 	__importer_name = "%s %s" % [exporter.get_name(), importer.get_name()]
 	__priority = 1
 	__resource_type = importer.get_resource_type()
 	__save_extension = importer.get_save_extension()
 	__visible_name = "%s -> %s" % [exporter.get_name(), importer.get_name()]
-	__editor_file_system = editor_file_system
 	var options: Array[Dictionary]
 	__options.append_array(importer.get_options())
 	__options.append(_Options.create_option(
@@ -43,7 +38,7 @@ func _init(exporter: _Exporter, importer: _Importer, atlas_maker: _AtlasMaker, e
 		_Options.POST_IMPORT_SCRIPT_PATH, "", PROPERTY_HINT_FILE, "*.gd", PROPERTY_USAGE_DEFAULT))
 	__options.append_array(exporter.get_options())
 	for option in __options:
-		if option.has("get_is_visible"):
+		if option.has(&"get_is_visible"):
 			__options_visibility_checkers[option.name] = option.get_is_visible
 
 func _import(
@@ -85,7 +80,6 @@ func _import(
 			res_source_file_path,
 			res_save_file_path,
 			self,
-			__editor_file_system,
 			options,
 			middle_import_script_context)
 		if error:
@@ -99,14 +93,12 @@ func _import(
 
 
 
-	var atlas_making_result: _AtlasMaker.AtlasMakingResult = \
-		__atlas_maker.make_atlas(middle_import_script_context.atlas_image, res_source_file_path, self)
-	if atlas_making_result.error:
-		push_error("Atlas texture making is failed. Errors chain:\n%s" % [atlas_making_result])
-		return atlas_making_result.error
+	var portableCompressedTexture: PortableCompressedTexture2D = PortableCompressedTexture2D.new()
+	portableCompressedTexture.create_from_image(middle_import_script_context.atlas_image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS)
+	
 	var import_result: _Importer.ImportResult = __importer.import(
 		res_source_file_path,
-		atlas_making_result.atlas,
+		portableCompressedTexture,
 		middle_import_script_context.sprite_sheet,
 		middle_import_script_context.animation_library,
 		options,
@@ -140,7 +132,6 @@ func _import(
 			res_source_file_path,
 			res_save_file_path,
 			self,
-			__editor_file_system,
 			options,
 			middle_import_script_context.middle_import_data,
 			post_import_script_context)

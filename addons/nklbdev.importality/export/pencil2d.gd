@@ -11,9 +11,9 @@ var __os_command_arguments_setting: _Setting = _Setting.new(
 	"pencil2d_command_arguments", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE,
 	"", true, func(v: PackedStringArray): return false)
 
-const __ANIMATIONS_PARAMETERS_OPTION: StringName = "pencil2d/animations_parameters"
+const __ANIMATIONS_PARAMETERS_OPTION: StringName = &"pencil2d/animations_parameters"
 
-func _init(editor_file_system: EditorFileSystem) -> void:
+func _init() -> void:
 	var recognized_extensions: PackedStringArray = ["pclx"]
 	super("Pencil2D", recognized_extensions, [
 		_Options.create_option(__ANIMATIONS_PARAMETERS_OPTION, PackedStringArray(),
