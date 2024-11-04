@@ -193,7 +193,7 @@ static func _parse_animation_params(
 		return result
 	return result
 
-func _create_sprite_sheet_builder(options: Dictionary) -> _SpriteSheetBuilderBase:
+static func _create_sprite_sheet_builder(options: Dictionary) -> _SpriteSheetBuilderBase:
 	var sprite_sheet_layout: _Common.SpriteSheetLayout = options[_Options.SPRITE_SHEET_LAYOUT]
 	return \
 	_PackedSpriteSheetBuilder.new(
