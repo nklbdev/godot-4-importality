@@ -16,11 +16,11 @@ In version 0.3.0, the plugin settings were moved from the ProjectSettings to the
 
 ## 📜 Table of contents
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [How to install](#how-to-install)
-- [How to use](#how-to-use)
-- [How to help the project](#how-to-help-the-project)
+- [Introduction](#-introduction)
+- [Features](#-features)
+- [How to install](#-how-to-install)
+- [How to use](#-how-to-use)
+- [How to help the project](#-how-to-help-the-project)
 
 ## 📝 Introduction
 
