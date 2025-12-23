@@ -82,7 +82,7 @@ static func pack(rects_sizes: Array[Vector2i]) -> RectPackingResult:
 	var bounds: Vector2i = rects_sizes[rects_order[0]]
 	var utilized_area: int = bounds.x * bounds.y
 
-	var splits_by_axis: Array[PackedInt32Array] = [[0, bounds.x], [0, bounds.y]]
+	var splits_by_axis: Array[PackedInt32Array] = [PackedInt32Array([0, bounds.x]), PackedInt32Array([0, bounds.y])]
 	__add_rect_to_cache(Rect2i(Vector2i.ZERO, rects_sizes[rects_order[0]]), rect_cache, rect_cache_grid_size)
 
 	for rect_index in range(1, rects_count): # skip first rect at (0, 0)
