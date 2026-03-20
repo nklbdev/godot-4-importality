@@ -28,7 +28,10 @@ static func export(res_source_file_path: String, options: Dictionary) -> _Export
 	var images_data: PackedByteArray = file.get_buffer(file.get_length() - file.get_position())
 	file.close()
 
-	var pxo_project: Dictionary = JSON.parse_string(first_line)
+	var pxo_project = JSON.parse_string(first_line)
+	if not pxo_project is Dictionary:
+		result.fail(ERR_PARSE_ERROR, "Failed to parse pxo file: expected JSON object on first line")
+		return result
 	var image_size: Vector2i = Vector2i(pxo_project.size_x, pxo_project.size_y)
 	var pxo_cel_image_buffer_size: int = image_size.x * image_size.y * 4
 	var pxo_cel_image_buffer_offset: int
@@ -171,7 +174,10 @@ static func load_image(image: Image, file_access: FileAccess, flags: int, scale:
 
 	var first_line: String = file.get_line()
 
-	var pxo_project: Dictionary = JSON.parse_string(first_line)
+	var pxo_project = JSON.parse_string(first_line)
+	if not pxo_project is Dictionary:
+		push_error("Failed to parse pxo file: expected JSON object on first line")
+		return ERR_PARSE_ERROR
 	var image_size: Vector2i = Vector2i(pxo_project.size_x, pxo_project.size_y)
 	var pxo_cel_image_buffer_size: int = image_size.x * image_size.y * 4
 	var pxo_cel_image_buffer_offset: int

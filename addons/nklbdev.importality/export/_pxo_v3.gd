@@ -196,10 +196,32 @@ func _create_animations() -> void:
 			tag.to - tag.from + 1,
 		)
 
+		if animation_params_result.error:
+			self._error = _Export.ExportResult.new()
+			self._error.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters",
+				animation_params_result)
+			return
+
+		var direction := animation_params_result.direction
+		var repeat_count := animation_params_result.repeat_count
+
+		var tag_user_data: String = tag.get("user_data", "")
+		if not tag_user_data.is_empty() and (direction < 0 or repeat_count < 0):
+			var user_data_params := _Export._parse_animation_params(
+				tag_user_data,
+				_Export.AnimationOptions.Direction | _Export.AnimationOptions.RepeatCount,
+				tag.from - 1,
+				tag.to - tag.from + 1,
+			)
+			if direction < 0:
+				direction = user_data_params.direction
+			if repeat_count < 0:
+				repeat_count = user_data_params.repeat_count
+
 		self._animation_library.animations[tag_index] = self._create_animation(
 			animation_params_result.name,
-			animation_params_result.direction,
-			animation_params_result.repeat_count,
+			direction,
+			repeat_count,
 			animation_params_result.first_frame_index,
 			animation_params_result.first_frame_index + animation_params_result.frames_count,
 		)
@@ -266,7 +288,7 @@ func _load() -> void:
 		)
 
 	self._data = json.data
-	self._empty_image = Image.create_empty(1, 1, false, Image.FORMAT_RGBA8)
+	self._empty_image = Image.create_empty(self._data.size_x, self._data.size_y, false, Image.FORMAT_RGBA8)
 	self._frame_images = []
 	self._frame_images.resize(self._data.frames.size())
 	self._frame_images.fill(self._empty_image)

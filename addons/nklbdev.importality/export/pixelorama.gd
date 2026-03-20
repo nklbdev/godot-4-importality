@@ -21,7 +21,7 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 		# Only return the v2 result if it succeeded; if both failed, the v3 result
 		# is returned on the theory that the more recent format is more likely to
 		# be what was intended.
-		if not v2_result.error:
+		if v2_result and not v2_result.error:
 			return v2_result
 
 	return v2_result if v2_result else v3_result

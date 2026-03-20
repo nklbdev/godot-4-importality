@@ -152,6 +152,15 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 			result.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters",
 				animation_params_parsing_result)
 			return result
+
+		var tag_user_data: String = tag_data.get("data", "")
+		var user_data_params_result: AnimationParamsParsingResult
+		if not tag_user_data.is_empty():
+			user_data_params_result = _parse_animation_params(
+				tag_user_data,
+				AnimationOptions.Direction | AnimationOptions.RepeatCount,
+				tag_data.from,
+				tag_data.to - tag_data.from + 1)
 		if unique_animations_names.has(animation_params_parsing_result.name):
 			result.fail(ERR_INVALID_DATA, "Duplicated animation name \"%s\" at index: %s" %
 				[animation_params_parsing_result.name, animation_index])
@@ -165,9 +174,13 @@ func _export(res_source_file_path: String, options: Dictionary) -> ExportResult:
 		if animation.name == autoplay_animation_name:
 			animation_library.autoplay_index = animation_index
 		animation.direction = __aseprite_animation_directions.find(tag_data.direction)
+		if user_data_params_result and user_data_params_result.direction >= 0:
+			animation.direction = user_data_params_result.direction
 		if animation_params_parsing_result.direction >= 0:
 			animation.direction = animation_params_parsing_result.direction
 		animation.repeat_count = int(tag_data.get("repeat", "0"))
+		if user_data_params_result and user_data_params_result.repeat_count >= 0:
+			animation.repeat_count = user_data_params_result.repeat_count
 		if animation_params_parsing_result.repeat_count >= 0:
 			animation.repeat_count = animation_params_parsing_result.repeat_count
 		for global_frame_index in range(tag_data.from, tag_data.to + 1):
