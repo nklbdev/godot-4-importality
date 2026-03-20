@@ -34,7 +34,7 @@ func import(
 				".:offset": func(frame: _Common.FrameInfo) -> Vector2:
 					return Vector2( # spatial sprite offset (the Y-axis is Up-directed)
 						frame.sprite.offset.x,
-						sprite_size.y - frame.sptite.offset.y -
+						sprite_size.y - frame.sprite.offset.y -
 						frame.sprite.region.size.y) + \
 						# add center correction
 						((Vector2(frame.sprite.region.size - sprite_size) * 0.5)
