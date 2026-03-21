@@ -69,6 +69,11 @@ var __options: Array[Dictionary] = [
 		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT,
 		func(o): return o[_Options.SPRITE_SHEET_LAYOUT] != \
 			_Common.SpriteSheetLayout.PACKED),
+	_Options.create_option(_Options.SPLIT_LAYERS, false,
+		PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED),
+	_Options.create_option(_Options.LAYERS_ANIMATION_NAME_FORMAT, 0,
+		PROPERTY_HINT_ENUM, "layer_name/tag_name,tag_name/layer_name", PROPERTY_USAGE_DEFAULT,
+		func(o): return o.get(_Options.SPLIT_LAYERS, false)),
 ]
 var __image_format_loader_extension: ImageFormatLoaderExtension
 
@@ -123,6 +128,42 @@ enum AnimationOptions {
 
 static var __option_regex: RegEx = RegEx.create_from_string("\\s-\\p{L}:\\s*\\S+")
 static var __natural_number_regex: RegEx = RegEx.create_from_string("\\A\\d+\\z")
+static var __integer_regex: RegEx = RegEx.create_from_string("\\A-?\\d+\\z")
+
+class LayerParamsParsingResult:
+	extends _Result
+	var name: String
+	var canvas_offset: Vector2i
+	func _get_result_type_description() -> String:
+		return "Layer parameters parsing"
+
+static func _parse_layer_params(raw_params: String) -> LayerParamsParsingResult:
+	var result = LayerParamsParsingResult.new()
+	result.canvas_offset = Vector2i.ZERO
+	# Prepend a space so options at the start of the string are matched by the regex
+	var padded: String = " " + raw_params.strip_edges()
+	var options_matches: Array[RegExMatch] = __option_regex.search_all(padded)
+	var first_match_position: int = padded.length()
+	for option_match in options_matches:
+		var match_position: int = option_match.get_start()
+		if match_position < first_match_position:
+			first_match_position = match_position
+		var raw_option: String = option_match.get_string().strip_edges()
+		var raw_value: String = raw_option.substr(3).strip_edges()
+		match raw_option.substr(0, 3):
+			"-o:":
+				var parts: PackedStringArray = raw_value.split(",")
+				if parts.size() == 2 \
+						and __integer_regex.search(parts[0]) \
+						and __integer_regex.search(parts[1]):
+					result.canvas_offset = Vector2i(parts[0].to_int(), parts[1].to_int())
+				else:
+					result.fail(ERR_INVALID_DATA,
+						"Wrong value format for layer canvas offset. Expected 'x,y' integers, got: \"%s\"" % [raw_value])
+					return result
+			_: pass # Ignore unknown parameters
+	result.name = padded.left(first_match_position).strip_edges()
+	return result
 
 class AnimationParamsParsingResult:
 	extends _Result

@@ -35,21 +35,13 @@ func export(options: Dictionary) -> _Export.ExportResult:
 	self._load()
 
 	if not self._error:
-		self._load_animation_images()
-
-	if not self._error:
-		self._build_sprite_sheet()
-
-	if not self._error:
-		self._create_animations()
+		self._export_all()
 
 	if self._error:
 		return self._error
 
 	var result := _Export.ExportResult.new()
-
 	result.success(self._atlas_image, self._sprite_sheet, self._animation_library)
-
 	return result
 
 ## Replace an image's data with the first frame in the project.
@@ -70,26 +62,6 @@ func set_image_data(image: Image) -> Error:
 	)
 
 	return OK
-
-## Build a sprite sheet containing all loaded frame images.
-func _build_sprite_sheet() -> void:
-	if not self._options:
-		self._error = _Export.ExportResult.new()
-		self._error.fail(ERR_BUG, "Building a sprite sheet requires export options.")
-
-		return
-
-	var sprite_sheet_builder := _Export._create_sprite_sheet_builder(self._options)
-	var sprite_sheet_result := sprite_sheet_builder.build_sprite_sheet(self._frame_images)
-
-	if sprite_sheet_result.error:
-		self._error = _Export.ExportResult.new()
-		self._error.fail(ERR_BUG, "Failed to build sprite sheet", sprite_sheet_result)
-
-		return
-
-	self._atlas_image = sprite_sheet_result.atlas_image
-	self._sprite_sheet = sprite_sheet_result.sprite_sheet
 
 func _is_version_supported(version: int) -> bool:
 	return version == 3
@@ -113,124 +85,6 @@ static func _compare_cels(a: Dictionary, b: Dictionary) -> bool:
 
 	return false
 
-## Create a single animation.
-##
-## [br]
-## [param start] The zero-based index of the first frame to include in the
-## animation. If creating an animation from a tag, this should be
-## [code]tag.from - 1[/code].
-## [br]
-## [param end] The zero-based index of the first frame to [b]not[/b] include
-## in the animation. If creating an animation from a tag, this should be
-## [code]tag.to[/code].
-func _create_animation(
-	name: String,
-	direction: _Common.AnimationDirection,
-	repeat_count: int,
-	start: int,
-	end: int,
-) -> _Common.AnimationInfo:
-	var animation := _Common.AnimationInfo.new()
-
-	animation.name = name
-	animation.direction = direction
-	animation.repeat_count = repeat_count
-	animation.frames.resize(end - start)
-
-	for animation_frame_index in end - start:
-		var project_frame_index := start + animation_frame_index
-		var frame := _Common.FrameInfo.new()
-
-		frame.duration = self._data.frames[project_frame_index].duration / self._data.fps
-		frame.sprite = self._sprite_sheet.sprites[project_frame_index]
-
-		animation.frames[animation_frame_index] = frame
-
-	return animation
-
-## Create an animation for each tag in the project.
-##
-## If the project doesn't contain any tags, a single animation will be created
-## which contains every frame in the project.
-func _create_animations() -> void:
-	if self._animation_library:
-		return
-
-	if not self._options:
-		self._error = _Export.ExportResult.new()
-		self._error.fail(ERR_BUG, "Creating animations requires export options.")
-
-		return
-
-	self._animation_library = _Common.AnimationLibraryInfo.new()
-
-	var autoplay_animation_name := self._get_string_option(_Options.AUTOPLAY_ANIMATION_NAME)
-
-	# If no tags are defined, create a single animation with the default name and
-	# containing all frames.
-	if self._data.tags.is_empty():
-		var default_animation_name := self._get_string_option(_Options.DEFAULT_ANIMATION_NAME)
-		var name := "default" if default_animation_name.is_empty() else default_animation_name
-
-		self._animation_library.animations.resize(1)
-
-		self._animation_library.animations[0] = self._create_animation(
-			name,
-			self._options[_Options.DEFAULT_ANIMATION_DIRECTION] as _Common.AnimationDirection,
-			self._options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT] as int,
-			0,
-			(self._data.frames as Array[Dictionary]).size()
-		)
-
-		if name == autoplay_animation_name:
-			self._animation_library.autoplay_index = 0
-
-		return
-
-	self._animation_library.animations.resize(self._data.tags.size())
-
-	for tag_index in self._data.tags.size():
-		var tag := self._data.tags[tag_index] as Dictionary
-
-		var animation_params_result := _Export._parse_animation_params(
-			tag.name,
-			_Export.AnimationOptions.Direction | _Export.AnimationOptions.RepeatCount,
-			tag.from - 1,
-			tag.to - tag.from + 1,
-		)
-
-		if animation_params_result.error:
-			self._error = _Export.ExportResult.new()
-			self._error.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters",
-				animation_params_result)
-			return
-
-		var direction := animation_params_result.direction
-		var repeat_count := animation_params_result.repeat_count
-
-		var tag_user_data: String = tag.get("user_data", "")
-		if not tag_user_data.is_empty() and (direction < 0 or repeat_count < 0):
-			var user_data_params := _Export._parse_animation_params(
-				tag_user_data,
-				_Export.AnimationOptions.Direction | _Export.AnimationOptions.RepeatCount,
-				tag.from - 1,
-				tag.to - tag.from + 1,
-			)
-			if direction < 0:
-				direction = user_data_params.direction
-			if repeat_count < 0:
-				repeat_count = user_data_params.repeat_count
-
-		self._animation_library.animations[tag_index] = self._create_animation(
-			animation_params_result.name,
-			direction,
-			repeat_count,
-			animation_params_result.first_frame_index,
-			animation_params_result.first_frame_index + animation_params_result.frames_count,
-		)
-
-		if animation_params_result.name == autoplay_animation_name:
-			self._animation_library.autoplay_index = tag_index
 
 ## Get the specified option as a string.
 ##
@@ -239,6 +93,189 @@ func _create_animations() -> void:
 ## of whitespace.
 func _get_string_option(name: String) -> String:
 	return (self._options[name] as String).strip_edges()
+
+## Returns true if the layer at the given index is effectively visible
+## (the layer itself and all parent groups are visible).
+func _is_layer_effectively_visible(layer_index: int) -> bool:
+	var layer: Dictionary = self._data.layers[layer_index]
+	if not layer.visible:
+		return false
+	if layer.parent >= 0:
+		return _is_layer_effectively_visible(layer.parent)
+	return true
+
+## Returns the indices of all effectively visible pixel layers.
+func _get_visible_pixel_layer_indices() -> PackedInt32Array:
+	var result: PackedInt32Array = PackedInt32Array()
+	for i in self._data.layers.size():
+		var layer: Dictionary = self._data.layers[i]
+		if layer.type != _PxoLayerType.PIXEL_LAYER:
+			continue
+		if _is_layer_effectively_visible(i):
+			result.push_back(i)
+	return result
+
+## Load the raw pixel data for a single layer of a single frame (no compositing).
+func _load_layer_raw_frame_image(frame_index: int, layer_index: int) -> Image:
+	var data: PackedByteArray = self._zip_reader.read_file(
+		"image_data/frames/%d/layer_%d" % [frame_index + 1, layer_index + 1])
+	if data.is_empty():
+		return self._empty_image.duplicate()
+	return Image.create_from_data(
+		self._data.size_x, self._data.size_y, false, Image.FORMAT_RGBA8, data)
+
+## Unified export implementation — handles both composite and per-layer split modes.
+## Normal import is the special case with one composite "layer" and no name affix.
+func _export_all() -> void:
+	var split_layers: bool = self._options.get(_Options.SPLIT_LAYERS, false)
+	var layer_name_first: bool = self._options.get(_Options.LAYERS_ANIMATION_NAME_FORMAT, 0) == 0
+	var autoplay_animation_name: String = self._get_string_option(_Options.AUTOPLAY_ANIMATION_NAME)
+
+	# Resolve tags with default fallback
+	var tags: Array = self._data.tags
+	var use_default_tag: bool = tags.is_empty()
+	if use_default_tag:
+		var default_name: String = self._get_string_option(_Options.DEFAULT_ANIMATION_NAME)
+		if default_name.is_empty():
+			default_name = "default"
+		tags = [{name = default_name, from = 1, to = self._data.frames.size()}]
+
+	# Parse all tags
+	var parsed_tags: Array = []
+	for tag in tags:
+		var params := _Export._parse_animation_params(
+			tag.name,
+			_Export.AnimationOptions.Direction | _Export.AnimationOptions.RepeatCount,
+			tag.from - 1,
+			tag.to - tag.from + 1)
+		if params.error:
+			self._error = _Export.ExportResult.new()
+			self._error.fail(ERR_CANT_RESOLVE, "Failed to parse animation parameters", params)
+			return
+		var direction: _Common.AnimationDirection = params.direction
+		var repeat_count: int = params.repeat_count
+		if not use_default_tag:
+			var tag_ud: String = tag.get("user_data", "")
+			if not tag_ud.is_empty() and (direction < 0 or repeat_count < 0):
+				var ud := _Export._parse_animation_params(tag_ud,
+					_Export.AnimationOptions.Direction | _Export.AnimationOptions.RepeatCount,
+					tag.from - 1, tag.to - tag.from + 1)
+				if direction < 0: direction = ud.direction
+				if repeat_count < 0: repeat_count = ud.repeat_count
+		if direction < 0:
+			direction = self._options[_Options.DEFAULT_ANIMATION_DIRECTION] as _Common.AnimationDirection
+		if repeat_count < 0:
+			repeat_count = self._options[_Options.DEFAULT_ANIMATION_REPEAT_COUNT] as int
+		parsed_tags.push_back({
+			name = params.name,
+			direction = direction,
+			repeat_count = repeat_count,
+			from = tag.from - 1,
+			to = tag.to - 1,
+		})
+
+	# Collect the set of frame indices needed across all tags
+	var needed_fi_set: Dictionary = {}
+	for pt in parsed_tags:
+		for fi in range(pt.from, pt.to + 1):
+			needed_fi_set[fi] = true
+	var needed_fi: PackedInt32Array = PackedInt32Array(needed_fi_set.keys())
+	needed_fi.sort()
+
+	# Build layer infos.
+	# Non-split: one info with layer_index = -1 (use composite frame images).
+	# Split: one info per visible pixel layer with per-layer raw images.
+	# Each info: {layer_index: int, name_prefix: String, name_suffix: String, canvas_offset: Vector2i}
+	var layer_infos: Array = []
+
+	if not split_layers:
+		for fi in needed_fi:
+			self._load_frame_image(fi)
+		if self._error: return
+		layer_infos.push_back({
+			layer_index = -1, name_prefix = "", name_suffix = "", canvas_offset = Vector2i.ZERO})
+	else:
+		var visible_indices: PackedInt32Array = _get_visible_pixel_layer_indices()
+		if visible_indices.is_empty():
+			self._error = _Export.ExportResult.new()
+			self._error.fail(ERR_INVALID_DATA, "No visible pixel layers found in Pixelorama project.")
+			return
+		for layer_index in visible_indices:
+			var layer: Dictionary = self._data.layers[layer_index]
+			var name_params := _Export._parse_layer_params(layer.name)
+			if name_params.error:
+				self._error = _Export.ExportResult.new()
+				self._error.fail(ERR_INVALID_DATA, "Failed to parse layer name params for \"%s\"" % layer.name, name_params)
+				return
+			var display_name: String = name_params.name
+			var canvas_offset: Vector2i = name_params.canvas_offset
+			var layer_ud: String = layer.get("user_data", "")
+			if not layer_ud.is_empty() and canvas_offset == Vector2i.ZERO:
+				var ud := _Export._parse_layer_params(layer_ud)
+				if not ud.error: canvas_offset = ud.canvas_offset
+			layer_infos.push_back({
+				layer_index = layer_index,
+				name_prefix = display_name + "/" if layer_name_first else "",
+				name_suffix = "" if layer_name_first else "/" + display_name,
+				canvas_offset = canvas_offset,
+			})
+
+	# Collect all frame images, applying canvas offsets where needed
+	var all_frame_images: Array[Image] = []
+	var sprite_indices: Array = []  # Array of Dict[fi -> sprite_sheet_index]
+	for info in layer_infos:
+		var sidx: Dictionary = {}
+		for fi in needed_fi:
+			var img: Image
+			if info.layer_index < 0:
+				img = self._frame_images[fi]
+			else:
+				img = _load_layer_raw_frame_image(fi, info.layer_index)
+			if info.canvas_offset != Vector2i.ZERO:
+				var shifted := Image.create_empty(
+					self._data.size_x, self._data.size_y, false, Image.FORMAT_RGBA8)
+				shifted.blit_rect(img,
+					Rect2i(info.canvas_offset.x, info.canvas_offset.y,
+						self._data.size_x, self._data.size_y),
+					Vector2i.ZERO)
+				img = shifted
+			sidx[fi] = all_frame_images.size()
+			all_frame_images.push_back(img)
+		sprite_indices.push_back(sidx)
+
+	# Build sprite sheet
+	var builder := _Export._create_sprite_sheet_builder(self._options)
+	var build_result := builder.build_sprite_sheet(all_frame_images)
+	if build_result.error:
+		self._error = _Export.ExportResult.new()
+		self._error.fail(ERR_BUG, "Failed to build sprite sheet", build_result)
+		return
+	self._atlas_image = build_result.atlas_image
+	self._sprite_sheet = build_result.sprite_sheet
+
+	# Create animations — identical loop for both split and non-split
+	self._animation_library = _Common.AnimationLibraryInfo.new()
+	for di in layer_infos.size():
+		var info: Dictionary = layer_infos[di]
+		var sidx: Dictionary = sprite_indices[di]
+		var unqualified: bool = info.name_prefix.is_empty() and info.name_suffix.is_empty()
+		for pt in parsed_tags:
+			var anim_name: String = info.name_prefix + pt.name + info.name_suffix
+			var animation := _Common.AnimationInfo.new()
+			animation.name = anim_name
+			animation.direction = pt.direction
+			animation.repeat_count = pt.repeat_count
+			for fi in range(pt.from, pt.to + 1):
+				var frame := _Common.FrameInfo.new()
+				frame.duration = self._data.frames[fi].duration / self._data.fps
+				frame.sprite = self._sprite_sheet.sprites[sidx[fi]]
+				animation.frames.push_back(frame)
+			if unqualified and anim_name == autoplay_animation_name:
+				self._animation_library.autoplay_index = self._animation_library.animations.size()
+			self._animation_library.animations.push_back(animation)
+	if not split_layers and not autoplay_animation_name.is_empty() \
+			and self._animation_library.autoplay_index < 0:
+		push_warning("Autoplay animation name not found: \"%s\". Continuing..." % [autoplay_animation_name])
 
 ## Load the project from its pxo file and initialize it.
 func _load() -> void:
@@ -304,20 +341,6 @@ func _load() -> void:
 			" Not all Pixelorama compositing features are supported by Importality, so frames may not" +
 			" look the way you expect unless you enable \"Include blended images\" in Pixelorama."
 		)
-
-## Preload the frame images for all animations.
-##
-## [br]
-## This allows the sprite sheet to be built before the animations, which can
-## then be created in a single step.
-func _load_animation_images() -> void:
-	if self._data.tags.is_empty():
-		for frame_index in self._data.frames.size():
-			self._load_frame_image(frame_index)
-	else:
-		for tag in self._data.tags:
-			for frame_index in range(tag.from - 1, tag.to):
-				self._load_frame_image(frame_index)
 
 ## Ensure a frame's image has been loaded.
 ##
