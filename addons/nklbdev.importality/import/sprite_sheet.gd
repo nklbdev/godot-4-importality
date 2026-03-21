@@ -66,6 +66,27 @@ func import(
 			frames = frames_data,
 		})
 
+	if options.get(_Options.CREATE_RESET_ANIMATION, false) \
+			and not animation_library.animations.is_empty():
+		var has_reset: bool = false
+		for anim in animations:
+			if anim.name == "RESET":
+				has_reset = true
+				break
+		if not has_reset:
+			var first_frames: Array[_Common.FrameInfo] = \
+				animation_library.animations[0].get_flatten_frames()
+			if not first_frames.is_empty():
+				animations.push_back({
+					name = "RESET",
+					direction = _Common.AnimationDirection.FORWARD,
+					repeat_count = 1,
+					frames = [{
+						sprite_index = unique_indixes_by_sprites[first_frames[0].sprite],
+						duration = 1.0,
+					}],
+				})
+
 	var portable_compressed_texture: PortableCompressedTexture2D = PortableCompressedTexture2D.new()
 	portable_compressed_texture.create_from_image(
 		atlas.get_image(),

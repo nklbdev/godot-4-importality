@@ -28,6 +28,8 @@ var __options: Array[Dictionary] = [
 	PROPERTY_HINT_RANGE, "0,,1,or_greater", PROPERTY_USAGE_DEFAULT),
 	_Options.create_option(_Options.AUTOPLAY_ANIMATION_NAME, "",
 	PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
+	_Options.create_option(_Options.CREATE_RESET_ANIMATION, false,
+	PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 	_Options.create_option(_Options.ATLAS_TEXTURES_REGION_FILTER_CLIP_ENABLED, false,
 	PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT),
 ]

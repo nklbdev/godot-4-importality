@@ -40,7 +40,8 @@ func import(
 						((Vector2(frame.sprite.region.size - sprite_size) * 0.5)
 						if sprite.centered else Vector2.ZERO),
 				".:region_rect": func(frame: _Common.FrameInfo) -> Rect2:
-					return Rect2(frame.sprite.region) })
+					return Rect2(frame.sprite.region) },
+				options.get(_Options.CREATE_RESET_ANIMATION, false))
 
 		_Common.AnimationStrategy.SINGLE_ATLAS_TEXTURE_REGION_AND_MARGIN:
 			var atlas_texture: AtlasTexture = AtlasTexture.new()
@@ -58,7 +59,8 @@ func import(
 						if frame.sprite.region.has_area() else \
 						Rect2(2, 2, 0, 0),
 				".:texture:region": func(frame: _Common.FrameInfo) -> Rect2:
-					return Rect2(frame.sprite.region) if frame.sprite.region.has_area() else Rect2(0, 0, 1, 1) })
+					return Rect2(frame.sprite.region) if frame.sprite.region.has_area() else Rect2(0, 0, 1, 1) },
+				options.get(_Options.CREATE_RESET_ANIMATION, false))
 
 		_Common.AnimationStrategy.MULTIPLE_ATLAS_TEXTURES_INSTANCES:
 			var atlas_textures: Array[AtlasTexture]
@@ -85,7 +87,8 @@ func import(
 					atlas_texture.region = region
 					atlas_texture.margin = margin
 					atlas_textures.append(atlas_texture)
-					return atlas_texture})
+					return atlas_texture},
+				options.get(_Options.CREATE_RESET_ANIMATION, false))
 
 	sprite.add_child(animation_player)
 	animation_player.owner = sprite

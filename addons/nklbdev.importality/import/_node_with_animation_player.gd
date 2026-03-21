@@ -11,7 +11,8 @@ class TrackFrame:
 
 static func _create_animation_player(
 	animation_library_info: _Common.AnimationLibraryInfo,
-	track_value_getters_by_property_path: Dictionary
+	track_value_getters_by_property_path: Dictionary,
+	create_reset_animation: bool = true
 	) -> AnimationPlayer:
 	var animation_player: AnimationPlayer = AnimationPlayer.new()
 	animation_player.name = &"AnimationPlayer"
@@ -30,6 +31,23 @@ static func _create_animation_player(
 
 		animation.loop_mode = Animation.LOOP_LINEAR if animation_info.repeat_count == 0 else Animation.LOOP_NONE
 		animation_library.add_animation(animation_info.name, animation)
+	# Add a RESET animation with the first frame of the first animation so that
+	# the sprite is visible in the editor before any animation plays. Skipped if
+	# the user already defined an animation named "RESET".
+	if create_reset_animation \
+			and not animation_library_info.animations.is_empty() \
+			and not animation_library.has_animation(&"RESET"):
+		var first_frames: Array[_Common.FrameInfo] = \
+			animation_library_info.animations[0].get_flatten_frames()
+		if not first_frames.is_empty():
+			var reset_animation := Animation.new()
+			var reset_frame: Array[_Common.FrameInfo] = [first_frames[0]]
+			for property_path in track_value_getters_by_property_path.keys():
+				__create_track(reset_animation, property_path,
+					reset_frame, track_value_getters_by_property_path[property_path])
+			reset_animation.length = 0.0
+			animation_library.add_animation(&"RESET", reset_animation)
+
 	animation_player.add_animation_library("", animation_library)
 
 	if animation_library_info.autoplay_index >= 0:
