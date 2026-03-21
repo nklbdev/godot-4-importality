@@ -91,19 +91,22 @@ func _build_sprite_sheet() -> void:
 	self._atlas_image = sprite_sheet_result.atlas_image
 	self._sprite_sheet = sprite_sheet_result.sprite_sheet
 
+func _is_version_supported(version: int) -> bool:
+	return version == 3
+
 ## Compare two frame cels by z-index.
 ##
 ## [br]
 ## If both cels have the same z-index, they are sorted by their layer index
 ## instead (i.e. their order is preserved).
 static func _compare_cels(a: Dictionary, b: Dictionary) -> bool:
-	if a.z_index > b.z_index:
+	if a.z_index < b.z_index:
 		return true
 
-	if a.z_index < b.z_index:
+	if a.z_index > b.z_index:
 		return false
 
-	if a.layer_index > b.layer_index:
+	if a.layer_index < b.layer_index:
 		return true
 
 	assert(a.layer_index != b.layer_index, "Can't happen; layer indices should be unique.")
@@ -281,11 +284,11 @@ func _load() -> void:
 
 		return
 
-	if json.data.pxo_version != 3:
-		push_warning(
-			"This project uses version " + str(json.data.pxo_version) +
-			" of the pxo file format, which is not currently supported by Importality."
-		)
+	if not _is_version_supported(int(json.data.pxo_version)):
+		self._error = _Export.ExportResult.new()
+		self._error.fail(ERR_FILE_UNRECOGNIZED,
+			"pxo version %d is not handled by this reader" % [int(json.data.pxo_version)])
+		return
 
 	self._data = json.data
 	self._empty_image = Image.create_empty(self._data.size_x, self._data.size_y, false, Image.FORMAT_RGBA8)
