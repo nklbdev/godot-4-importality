@@ -65,7 +65,7 @@ func _import(
 	# -------- MIDDLE IMPORT BEGIN --------
 	var middle_import_script_path: String = options[_Options.MIDDLE_IMPORT_SCRIPT_PATH].strip_edges()
 	if middle_import_script_path:
-		if not (middle_import_script_path.is_absolute_path() and middle_import_script_path.begins_with("res://")):
+		if not (middle_import_script_path.begins_with("res://") or middle_import_script_path.begins_with("uid://")):
 			push_error("Middle import script path is not valid: %s" % [middle_import_script_path])
 			return ERR_FILE_BAD_PATH
 		var middle_import_script: Script = ResourceLoader \
@@ -117,7 +117,7 @@ func _import(
 	# -------- POST IMPORT BEGIN --------
 	var post_import_script_path: String = options[_Options.POST_IMPORT_SCRIPT_PATH].strip_edges()
 	if post_import_script_path:
-		if not (post_import_script_path.is_absolute_path() and post_import_script_path.begins_with("res://")):
+		if not (post_import_script_path.begins_with("res://") or post_import_script_path.begins_with("uid://")):
 			push_error("Post import script path is not valid: %s" % [post_import_script_path])
 			return ERR_FILE_BAD_PATH
 		var post_import_script: Script = ResourceLoader \
