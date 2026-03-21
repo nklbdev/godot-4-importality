@@ -2,6 +2,7 @@
 extends "standalone_image_format_loader_extension.gd"
 
 const _Common = preload("common.gd")
+const _DirAccessExtensions = preload("dir_access_ext.gd")
 
 static var command_building_rules_for_custom_image_loader_setting: _Setting = _Setting.new(
 	"command_building_rules_for_custom_image_loader", PackedStringArray(), TYPE_PACKED_STRING_ARRAY, PROPERTY_HINT_NONE)
@@ -83,8 +84,14 @@ func _load_image(
 
 	var global_input_path: String = file_access.get_path_absolute()
 	var extension = global_input_path.get_extension()
-	var global_output_path: String = ProjectSettings.globalize_path(
-		temp_dir_path_result.value.path_join("temp.png"))
+	var global_temp_dir_path: String = ProjectSettings.globalize_path(temp_dir_path_result.value.strip_edges())
+	var unique_temp_dir_creation_result: _DirAccessExtensions.CreationResult = \
+		_DirAccessExtensions.create_directory_with_unique_name(global_temp_dir_path)
+	if unique_temp_dir_creation_result.error:
+		push_error("Failed to create unique temporary directory: %s" % [unique_temp_dir_creation_result])
+		return ERR_CANT_CREATE
+	var unique_temp_dir_path: String = unique_temp_dir_creation_result.path
+	var global_output_path: String = unique_temp_dir_path.path_join("temp.png")
 
 	var command_template: String = command_templates_by_extensions.get(extension, "") as String
 	if command_template.is_empty():
@@ -132,10 +139,12 @@ func _load_image(
 			"the external image converting utility command.",
 			"Process exited with code %s:\nCommand: %s%s"
 			]) % [exit_code, command, "".join(arguments)])
+		_DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path)
 		return ERR_QUERY_FAILED
 
 	if not FileAccess.file_exists(global_output_path):
 		push_error("The output temporary PNG file is not found: %s" % [global_output_path])
+		_DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path)
 		return ERR_UNCONFIGURED
 
 	var err: Error = image.load_png_from_buffer(FileAccess.get_file_as_bytes(global_output_path))
@@ -143,9 +152,10 @@ func _load_image(
 		push_error("Failed to load temporary PNG file as image: %s" % [global_output_path])
 		return err
 
-	err = DirAccess.remove_absolute(global_output_path)
-	if err:
-		push_warning("Failed to remove temporary file \"%s\". Continuing..." % [global_output_path])
+	var removal_result: _DirAccessExtensions.RemovalResult = \
+		_DirAccessExtensions.remove_dir_recursive(unique_temp_dir_path)
+	if removal_result.error:
+		push_warning("Failed to remove temporary directory \"%s\". Continuing..." % [unique_temp_dir_path])
 
 	return OK
 
