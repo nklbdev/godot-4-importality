@@ -93,6 +93,5 @@ func import(
 
 	var packed_scene: PackedScene = PackedScene.new()
 	packed_scene.pack(texture_rect)
-	result.success(packed_scene,
-		ResourceSaver.FLAG_COMPRESS | ResourceSaver.FLAG_BUNDLE_RESOURCES)
+	result.success(packed_scene, ResourceSaver.FLAG_COMPRESS)
 	return result

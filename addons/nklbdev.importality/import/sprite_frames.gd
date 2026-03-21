@@ -59,6 +59,5 @@ func import(
 			sprite_frames.add_frame(animation.name, atlas_texture, frame.duration)
 			previous_texture = atlas_texture
 
-	result.success(sprite_frames,
-		ResourceSaver.FLAG_COMPRESS | ResourceSaver.FLAG_BUNDLE_RESOURCES)
+	result.success(sprite_frames, ResourceSaver.FLAG_COMPRESS)
 	return result
